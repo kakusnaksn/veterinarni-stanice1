@@ -44,15 +44,24 @@ const initUsers = async () => {
 };
 initUsers();
 
-const SECRET_KEY = process.env.JWT_SECRET || 'tajny-klic-pro-jwt'; // Nastav si vlastní tajný klíč v produkci!
+const SECRET_KEY = process.env.JWT_SECRET || 'tajny-klic-pro-jwt'; // Použije JWT_SECRET z Renderu
 
-// Middleware pro ověření JWT
+// Middleware pro ověření JWT s logováním
 function authenticateToken(req, res, next) {
-    const token = req.headers['authorization'];
-    if (!token) return res.status(401).json({ error: 'Přístup odepřen' });
+    const authHeader = req.headers['authorization'];
+    console.log('Authorization Header:', authHeader); // Log hlavičky
+    const token = authHeader && authHeader.split(' ')[1];
+    if (!token) {
+        console.log('No token provided');
+        return res.status(401).json({ error: 'Přístup odepřen – chybí token' });
+    }
 
     jwt.verify(token, SECRET_KEY, (err, user) => {
-        if (err) return res.status(403).json({ error: 'Neplatný token' });
+        if (err) {
+            console.log('JWT Verify Error:', err.message); // Log chyby
+            return res.status(403).json({ error: 'Neplatný token' });
+        }
+        console.log('Token ověřen, uživatel:', user); // Log úspěšného ověření
         req.user = user;
         next();
     });
@@ -64,14 +73,16 @@ app.post('/login', async (req, res) => {
     db.get('SELECT * FROM users WHERE username = ?', [jmeno], async (err, user) => {
         if (err) return res.status(500).json({ error: err.message });
         if (!user || !(await bcrypt.compare(heslo, user.password))) {
+            console.log('Přihlášení selhalo: špatné jméno nebo heslo');
             return res.status(401).json({ success: false, message: 'Špatné jméno nebo heslo' });
         }
         const token = jwt.sign({ id: user.id, username: user.username }, SECRET_KEY, { expiresIn: '1h' });
+        console.log('Přihlášení úspěšné, token vygenerován');
         res.json({ success: true, token });
     });
 });
 
-// API endpoints s ověřením
+// API endpoints
 app.get('/reservations/:date', (req, res) => {
     const date = req.params.date;
     db.all('SELECT * FROM reservations WHERE date = ?', [date], (err, rows) => {
@@ -86,6 +97,7 @@ app.post('/reservations', authenticateToken, (req, res) => {
         [date, time, timeEnd || null, zakaznik, zvire, duvod, telefon || null, email || null],
         function(err) {
             if (err) return res.status(500).json({ error: err.message });
+            console.log('Rezervace uložena, ID:', this.lastID);
             res.json({ id: this.lastID });
         });
 });
@@ -97,6 +109,7 @@ app.put('/reservations/:id', authenticateToken, (req, res) => {
         [time, timeEnd || null, zakaznik, zvire, duvod, telefon || null, email || null, id],
         function(err) {
             if (err) return res.status(500).json({ error: err.message });
+            console.log('Rezervace upravena, ID:', id);
             res.json({ updated: this.changes });
         });
 });
@@ -105,6 +118,7 @@ app.delete('/reservations/:id', authenticateToken, (req, res) => {
     const id = req.params.id;
     db.run('DELETE FROM reservations WHERE id = ?', [id], function(err) {
         if (err) return res.status(500).json({ error: err.message });
+        console.log('Rezervace smazána, ID:', id);
         res.json({ deleted: this.changes });
     });
 });
