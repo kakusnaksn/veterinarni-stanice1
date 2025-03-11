@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rezervace - Veterinární ordinace</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        .hlavicka {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            background-color: #4CAF50;
+            color: white;
+        }
+        .hlavicka h1 {
+            margin: 0;
+        }
+        .prihlaseni-btn {
+            padding: 10px 20px;
+            background-color: #ffffff;
+            color: #4CAF50;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .prihlaseni-btn:hover {
+            background-color: #e0e0e0;
+        }
+        .kalendar, .admin-sekce {
+            max-width: 1000px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .datum {
+            text-align: center;
+            font-size: 1.2em;
+            margin-bottom: 20px;
+        }
+        .vyber-datum {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .vyber-datum input[type="date"] {
+            padding: 8px;
+            font-size: 1em;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .mesic-kalendar {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .den {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .den.volny { background-color: #4CAF50; color: white; }
+        .den.obsazeny { background-color: #f44336; color: white; }
+        .den:hover:not(.obsazeny) { background-color: #45a049; }
+        .terminy {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .termin {
+            padding: 15px;
+            text-align: center;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .volny { background-color: #4CAF50; color: white; }
+        .obsazeny { background-color: #f44336; color: white; }
+        .volny:hover { background-color: #45a049; }
+        .obsazeny:hover { background-color: #d32f2f; }
+        .podrobnosti {
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+        .mesic-ovladani {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .mesic-ovladani button {
+            padding: 8px 16px;
+            margin: 0 5px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .mesic-ovladani button:hover {
+            background-color: #45a049;
+        }
+        #prihlaseni-form, #rezervace-form, #editace-form {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.3);
+            width: 300px;
+        }
+        #prihlaseni-form h3, #rezervace-form h3, #editace-form h3 {
+            margin: 0 0 20px 0;
+            text-align: center;
+        }
+        #prihlaseni-form .zavrit, #rezervace-form .zavrit, #editace-form .zavrit {
+            position: absolute;
+            right: 10px;
+            top: 5px;
+            font-size: 20px;
+            cursor: pointer;
+            color: #f44336;
+        }
+        #prihlaseni-form input, #rezervace-form input, #editace-form input, #editace-form select {
+            display: block;
+            width: calc(100% - 20px);
+            margin: 10px auto;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        #prihlaseni-form button, #rezervace-form button, #editace-form button {
+            display: block;
+            width: calc(100% - 20px);
+            margin: 10px auto;
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        #editace-form .smazat-btn {
+            background-color: #f44336;
+        }
+        #prihlaseni-form button:hover, #rezervace-form button:hover, #editace-form button:hover {
+            background-color: #45a049;
+        }
+        #editace-form .smazat-btn:hover {
+            background-color: #d32f2f;
+        }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div class="hlavicka">
+        <h1>Veterinární ordinace - Rezervace</h1>
+        <button class="prihlaseni-btn" onclick="zobrazitPrihlaseni()">Přihlášení pro zaměstnance</button>
+    </div>
+
+    <div class="kalendar" id="zakaznici-sekce">
+        <div class="datum" id="datum-zakaznici"></div>
+        <div class="vyber-datum">
+            <input type="date" id="vyber-dne" onchange="zmenitDen(this.value)">
+        </div>
+        <div class="terminy" id="terminy-zakaznici"></div>
+    </div>
+
+    <div class="admin-sekce hidden" id="admin-sekce">
+        <div class="datum" id="datum-admin"></div>
+        <div class="mesic-ovladani">
+            <button onclick="predchoziMesic()">Předchozí měsíc</button>
+            <button onclick="nasledujiciMesic()">Následující měsíc</button>
+        </div>
+        <div class="mesic-kalendar" id="mesic-kalendar-admin"></div>
+        <div class="vyber-datum">
+            <input type="date" id="vyber-dne-admin" onchange="zmenitDenAdmin(this.value)">
+        </div>
+        <div class="terminy" id="terminy-admin"></div>
+    </div>
+
+    <div id="prihlaseni-form">
+        <h3>Přihlášení zaměstnance <span class="zavrit" onclick="zavritPrihlaseni()">×</span></h3>
+        <input type="text" id="jmeno" placeholder="Uživatelské jméno">
+        <input type="password" id="heslo" placeholder="Heslo">
+        <button onclick="prihlasit()">Přihlásit se</button>
+    </div>
+
+    <div id="rezervace-form">
+        <h3>Nová rezervace <span class="zavrit" onclick="zavritRezervaci()">×</span></h3>
+        <input type="text" id="zakaznik" placeholder="Jméno zákazníka" required>
+        <input type="text" id="zvire" placeholder="Jméno zvířete" required>
+        <input type="text" id="duvod" placeholder="Důvod návštěvy" required>
+        <input type="text" id="telefon" placeholder="Telefon (volitelné)">
+        <input type="email" id="email" placeholder="E-mail (volitelné)">
+        <button onclick="ulozitRezervaci()">Uložit</button>
+    </div>
+
+    <div id="editace-form">
+        <h3>Upravit rezervaci <span class="zavrit" onclick="zavritEditaci()">×</span></h3>
+        <input type="text" id="edit-zakaznik" placeholder="Jméno zákazníka" required>
+        <input type="text" id="edit-zvire" placeholder="Jméno zvířete" required>
+        <input type="text" id="edit-duvod" placeholder="Důvod návštěvy" required>
+        <input type="text" id="edit-telefon" placeholder="Telefon (volitelné)">
+        <input type="email" id="edit-email" placeholder="E-mail (volitelné)">
+        <select id="edit-cas-zacatek" required>
+            <option value="8:00">8:00</option>
+            <option value="8:30">8:30</option>
+            <option value="9:00">9:00</option>
+            <option value="9:30">9:30</option>
+            <option value="10:00">10:00</option>
+            <option value="10:30">10:30</option>
+            <option value="11:00">11:00</option>
+            <option value="11:30">11:30</option>
+            <option value="13:00">13:00</option>
+            <option value="13:30">13:30</option>
+            <option value="14:00">14:00</option>
+            <option value="14:30">14:30</option>
+            <option value="15:00">15:00</option>
+            <option value="15:30">15:30</option>
+        </select>
+        <select id="edit-cas-konec" required>
+            <option value="">Žádný konec</option>
+            <option value="8:30">8:30</option>
+            <option value="9:00">9:00</option>
+            <option value="9:30">9:30</option>
+            <option value="10:00">10:00</option>
+            <option value="10:30">10:30</option>
+            <option value="11:00">11:00</option>
+            <option value="11:30">11:30</option>
+            <option value="13:00">13:00</option>
+            <option value="13:30">13:30</option>
+            <option value="14:00">14:00</option>
+            <option value="14:30">14:30</option>
+            <option value="15:00">15:00</option>
+            <option value="15:30">15:30</option>
+            <option value="16:00">16:00</option>
+        </select>
+        <button onclick="ulozitEditaci()">Uložit změny</button>
+        <button class="smazat-btn" onclick="smazatRezervaci()">Smazat rezervaci</button>
+    </div>
+
+    <script>
+        let vybranyDen = new Date();
+        let jePrihlasen = false;
+        let vybranyTermin = null;
+        const casy = ["8:00", "8:30", "9:00", "9:30", "10:00", "10:30", "11:00", "11:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30"];
+
+        async function fetchReservations(date) {
+            const response = await fetch(`/reservations/${date}`);
+            return await response.json();
+        }
+
+        async function aktualizovatZakaznici() {
+            const datumZakaznici = document.getElementById('datum-zakaznici');
+            const vyberDne = document.getElementById('vyber-dne');
+            vyberDne.value = vybranyDen.toISOString().split('T')[0];
+            datumZakaznici.textContent = `Rezervace na ${vybranyDen.toLocaleDateString('cs-CZ', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`;
+            await aktualizovatTerminy('terminy-zakaznici', false);
+        }
+
+        async function aktualizovatAdmin() {
+            const datumAdmin = document.getElementById('datum-admin');
+            const vyberDneAdmin = document.getElementById('vyber-dne-admin');
+            vyberDneAdmin.value = vybranyDen.toISOString().split('T')[0];
+            datumAdmin.textContent = `Správa rezervací na ${vybranyDen.toLocaleDateString('cs-CZ', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`;
+            await aktualizovatMesicKalendar();
+            await aktualizovatTerminy('terminy-admin', true);
+        }
+
+        async function aktualizovatMesicKalendar() {
+            const kalendar = document.getElementById('mesic-kalendar-admin');
+            kalendar.innerHTML = '';
+            const prvniDen = new Date(vybranyDen.getFullYear(), vybranyDen.getMonth(), 1);
+            const posledniDen = new Date(vybranyDen.getFullYear(), vybranyDen.getMonth() + 1, 0);
+            const startDen = prvniDen.getDay() || 7;
+
+            for (let i = 1; i < startDen; i++) {
+                const div = document.createElement('div');
+                div.classList.add('den');
+                kalendar.appendChild(div);
+            }
+
+            for (let i = 1; i <= posledniDen.getDate(); i++) {
+                const den = new Date(vybranyDen.getFullYear(), vybranyDen.getMonth(), i);
+                const denKey = den.toISOString().split('T')[0];
+                const reservations = await fetchReservations(denKey);
+                const div = document.createElement('div');
+                div.classList.add('den');
+                div.textContent = i;
+                const maVolne = casy.some(cas => !reservations.some(r => r.time === cas));
+                div.classList.add(maVolne ? 'volny' : 'obsazeny');
+                div.addEventListener('click', () => {
+                    vybranyDen = den;
+                    aktualizovatAdmin();
+                });
+                kalendar.appendChild(div);
+            }
+        }
+
+        async function aktualizovatTerminy(terminyId, editMode) {
+            const terminyList = document.getElementById(terminyId);
+            terminyList.innerHTML = '';
+            const denKey = vybranyDen.toISOString().split('T')[0];
+            const reservations = await fetchReservations(denKey);
+
+            casy.forEach(cas => {
+                const reservation = reservations.find(r => r.time === cas);
+                const div = document.createElement('div');
+                div.classList.add('termin');
+                div.dataset.id = reservation ? reservation.id : null;
+                div.textContent = reservation ? `${reservation.time}${reservation.timeEnd ? ` - ${reservation.timeEnd}` : ''}` : cas;
+
+                if (!reservation) {
+                    div.classList.add('volny');
+                } else {
+                    div.classList.add('obsazeny');
+                    if (editMode) {
+                        const podrobnosti = document.createElement('div');
+                        podrobnosti.classList.add('podrobnosti');
+                        let text = `${reservation.zakaznik} (${reservation.zvire}) - ${reservation.duvod}`;
+                        if (reservation.telefon) text += `\nTel: ${reservation.telefon}`;
+                        if (reservation.email) text += `\nEmail: ${reservation.email}`;
+                        podrobnosti.textContent = text;
+                        div.appendChild(podrobnosti);
+                    }
+                }
+
+                div.addEventListener('click', async () => {
+                    if (editMode && reservation) {
+                        vybranyTermin = reservation;
+                        zobrazitEditaci();
+                    } else if (editMode && !reservation) {
+                        vybranyTermin = { date: denKey, time: cas };
+                        zobrazitRezervaci();
+                    } else if (!editMode && !reservation) {
+                        alert(`Vybrali jste termín ${cas} dne ${vybranyDen.toLocaleDateString('cs-CZ')}. Prosím, potvrďte rezervaci telefonicky nebo emailem.`);
+                    }
+                });
+
+                terminyList.appendChild(div);
+            });
+        }
+
+        function predchoziMesic() {
+            vybranyDen.setMonth(vybranyDen.getMonth() - 1);
+            aktualizovatAdmin();
+        }
+
+        function nasledujiciMesic() {
+            vybranyDen.setMonth(vybranyDen.getMonth() + 1);
+            aktualizovatAdmin();
+        }
+
+        function zmenitDen(datum) {
+            vybranyDen = new Date(datum);
+            aktualizovatZakaznici();
+        }
+
+        function zmenitDenAdmin(datum) {
+            vybranyDen = new Date(datum);
+            aktualizovatAdmin();
+        }
+
+        function zobrazitPrihlaseni() {
+            document.getElementById('prihlaseni-form').style.display = 'block';
+            document.getElementById('jmeno').value = '';
+            document.getElementById('heslo').value = '';
+        }
+
+        function zavritPrihlaseni() {
+            document.getElementById('prihlaseni-form').style.display = 'none';
+        }
+
+        async function prihlasit() {
+            const jmeno = document.getElementById('jmeno').value;
+            const heslo = document.getElementById('heslo').value;
+            const response = await fetch('/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ jmeno, heslo })
+            });
+            const result = await response.json();
+            if (result.success) {
+                jePrihlasen = true;
+                document.getElementById('prihlaseni-form').style.display = 'none';
+                document.getElementById('zakaznici-sekce').classList.add('hidden');
+                document.getElementById('admin-sekce').classList.remove('hidden');
+                document.querySelector('.prihlaseni-btn').textContent = "Odhlásit";
+                document.querySelector('.prihlaseni-btn').onclick = odhlasit;
+                aktualizovatAdmin();
+            } else {
+                alert("Špatné jméno nebo heslo!");
+            }
+        }
+
+        function odhlasit() {
+            jePrihlasen = false;
+            document.getElementById('zakaznici-sekce').classList.remove('hidden');
+            document.getElementById('admin-sekce').classList.add('hidden');
+            document.querySelector('.prihlaseni-btn').textContent = "Přihlášení pro zaměstnance";
+            document.querySelector('.prihlaseni-btn').onclick = zobrazitPrihlaseni;
+            aktualizovatZakaznici();
+        }
+
+        function zobrazitRezervaci() {
+            if (!jePrihlasen) return alert("Musíte být přihlášeni!");
+            document.getElementById('rezervace-form').style.display = 'block';
+            document.getElementById('zakaznik').value = '';
+            document.getElementById('zvire').value = '';
+            document.getElementById('duvod').value = '';
+            document.getElementById('telefon').value = '';
+            document.getElementById('email').value = '';
+        }
+
+        function zavritRezervaci() {
+            document.getElementById('rezervace-form').style.display = 'none';
+        }
+
+        async function ulozitRezervaci() {
+            if (!jePrihlasen) return alert("Musíte být přihlášeni!");
+            const zakaznik = document.getElementById('zakaznik').value;
+            const zvire = document.getElementById('zvire').value;
+            const duvod = document.getElementById('duvod').value;
+            const telefon = document.getElementById('telefon').value;
+            const email = document.getElementById('email').value;
+            if (zakaznik && zvire && duvod) {
+                const reservation = {
+                    date: vybranyTermin.date,
+                    time: vybranyTermin.time,
+                    zakaznik,
+                    zvire,
+                    duvod,
+                    telefon,
+                    email
+                };
+                await fetch('/reservations', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(reservation)
+                });
+                document.getElementById('rezervace-form').style.display = 'none';
+                aktualizovatAdmin();
+            } else {
+                alert("Vyplňte povinné údaje (jméno, zvíře, důvod)!");
+            }
+        }
+
+        function zobrazitEditaci() {
+            if (!jePrihlasen) return alert("Musíte být přihlášeni!");
+            document.getElementById('editace-form').style.display = 'block';
+            document.getElementById('edit-zakaznik').value = vybranyTermin.zakaznik;
+            document.getElementById('edit-zvire').value = vybranyTermin.zvire;
+            document.getElementById('edit-duvod').value = vybranyTermin.duvod;
+            document.getElementById('edit-telefon').value = vybranyTermin.telefon || '';
+            document.getElementById('edit-email').value = vybranyTermin.email || '';
+            document.getElementById('edit-cas-zacatek').value = vybranyTermin.time;
+            document.getElementById('edit-cas-konec').value = vybranyTermin.timeEnd || '';
+        }
+
+        function zavritEditaci() {
+            document.getElementById('editace-form').style.display = 'none';
+        }
+
+        async function ulozitEditaci() {
+            if (!jePrihlasen) return alert("Musíte být přihlášeni!");
+            const zakaznik = document.getElementById('edit-zakaznik').value;
+            const zvire = document.getElementById('edit-zvire').value;
+            const duvod = document.getElementById('edit-duvod').value;
+            const telefon = document.getElementById('edit-telefon').value;
+            const email = document.getElementById('edit-email').value;
+            const time = document.getElementById('edit-cas-zacatek').value;
+            const timeEnd = document.getElementById('edit-cas-konec').value;
+
+            if (zakaznik && zvire && duvod) {
+                const reservation = {
+                    time,
+                    timeEnd: timeEnd || null,
+                    zakaznik,
+                    zvire,
+                    duvod,
+                    telefon,
+                    email
+                };
+                await fetch(`/reservations/${vybranyTermin.id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(reservation)
+                });
+                document.getElementById('editace-form').style.display = 'none';
+                aktualizovatAdmin();
+            } else {
+                alert("Vyplňte povinné údaje (jméno, zvíře, důvod)!");
+            }
+        }
+
+        async function smazatRezervaci() {
+            if (!jePrihlasen) return alert("Musíte být přihlášeni!");
+            const potvrzeni = confirm(`Opravdu chcete smazat rezervaci pro ${vybranyTermin.zakaznik}?`);
+            if (potvrzeni) {
+                try {
+                    const response = await fetch(`/reservations/${vybranyTermin.id}`, {
+                        method: 'DELETE'
+                    });
+                    if (!response.ok) throw new Error('Chyba při mazání rezervace');
+                    document.getElementById('editace-form').style.display = 'none';
+                    aktualizovatAdmin();
+                } catch (error) {
+                    console.error('Chyba:', error);
+                    alert('Nepodařilo se smazat rezervaci. Zkuste to znovu.');
+                }
+            }
+        }
+
+        // Inicializace
+        aktualizovatZakaznici();
+    </script>
+</body>
+</html>
