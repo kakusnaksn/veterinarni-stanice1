@@ -11,7 +11,7 @@
         .hlavicka-buttons { display: flex; gap: 10px; }
         .prihlaseni-btn { padding: 10px 20px; width: 160px; background-color: #ffffff; color: #4CAF50; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; text-align: center; }
         .prihlaseni-btn:hover { background-color: #e0e0e0; }
-        .kalendar, .admin-sekce { max-width: 1000px; margin: 20px auto; padding: 20px; background-color: white; border-radius: 5px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        .sekce { max-width: 1000px; margin: 20px auto; padding: 20px; background-color: white; border-radius: 5px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
         .datum { text-align: center; font-size: 1.2em; margin-bottom: 20px; }
         .vyber-datum { text-align: center; margin-bottom: 20px; }
         .vyber-datum input[type="date"] { padding: 8px; font-size: 1em; border: 1px solid #ddd; border-radius: 5px; }
@@ -32,17 +32,23 @@
         .mesic-ovladani { text-align: center; margin-bottom: 10px; }
         .mesic-ovladani button { padding: 8px 16px; margin: 0 5px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; }
         .mesic-ovladani button:hover { background-color: #45a049; }
-        #prihlaseni-form, #registrace-form, #rezervace-form, #editace-form { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: white; padding: 20px; border-radius: 5px; box-shadow: 0 0 10px rgba(0,0,0,0.3); width: 300px; }
-        #prihlaseni-form h3, #registrace-form h3, #rezervace-form h3, #editace-form h3 { margin: 0 0 20px 0; text-align: center; }
-        #prihlaseni-form .zavrit, #registrace-form .zavrit, #rezervace-form .zavrit, #editace-form .zavrit { position: absolute; right: 10px; top: 5px; font-size: 20px; cursor: pointer; color: #f44336; }
-        #prihlaseni-form input, #registrace-form input, #rezervace-form input, #editace-form input, #editace-form select { display: block; width: calc(100% - 20px); margin: 10px auto; padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
-        #prihlaseni-form button, #registrace-form button, #rezervace-form button, #editace-form button { display: block; width: calc(100% - 20px); margin: 10px auto; padding: 10px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; }
-        #editace-form .smazat-btn { background-color: #f44336; }
-        #editace-form .schvalit-btn { background-color: #2196F3; }
-        #prihlaseni-form button:hover, #registrace-form button:hover, #rezervace-form button:hover, #editace-form button:hover { background-color: #45a049; }
-        #editace-form .smazat-btn:hover { background-color: #d32f2f; }
-        #editace-form .schvalit-btn:hover { background-color: #1976D2; }
+        .formular { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: white; padding: 20px; border-radius: 5px; box-shadow: 0 0 10px rgba(0,0,0,0.3); width: 400px; }
+        .formular h3 { margin: 0 0 20px 0; text-align: center; }
+        .formular .zavrit { position: absolute; right: 10px; top: 5px; font-size: 20px; cursor: pointer; color: #f44336; }
+        .formular input, .formular select, .formular textarea { display: block; width: calc(100% - 20px); margin: 10px auto; padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
+        .formular button { display: block; width: calc(100% - 20px); margin: 10px auto; padding: 10px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .formular .smazat-btn { background-color: #f44336; }
+        .formular .schvalit-btn { background-color: #2196F3; }
+        .formular button:hover { background-color: #45a049; }
+        .formular .smazat-btn:hover { background-color: #d32f2f; }
+        .formular .schvalit-btn:hover { background-color: #1976D2; }
         .hidden { display: none; }
+        .search-bar { margin: 20px 0; text-align: center; }
+        .search-bar input { width: 50%; padding: 10px; }
+        .user-list, .notes-list { margin-top: 20px; }
+        .user-item, .note-item { padding: 10px; border-bottom: 1px solid #ddd; }
+        .pet-list { margin-top: 10px; }
+        .pet-item { padding: 5px; border: 1px solid #ddd; border-radius: 5px; margin-bottom: 5px; }
     </style>
 </head>
 <body>
@@ -51,11 +57,12 @@
         <div class="hlavicka-buttons">
             <button class="prihlaseni-btn" onclick="zobrazitPrihlaseni()">Přihlášení</button>
             <button class="prihlaseni-btn" onclick="zobrazitRegistraci()">Registrace</button>
+            <button class="prihlaseni-btn hidden" id="profil-btn" onclick="zobrazitProfil()">Profil</button>
             <button class="prihlaseni-btn hidden" id="odhlaseni-btn" onclick="odhlasit()">Odhlásit</button>
         </div>
     </div>
 
-    <div class="kalendar" id="zakaznici-sekce">
+    <div class="sekce" id="zakaznici-sekce">
         <div class="datum" id="datum-zakaznici"></div>
         <div class="vyber-datum">
             <input type="date" id="vyber-dne" onchange="zmenitDen(this.value)">
@@ -63,7 +70,7 @@
         <div class="terminy" id="terminy-zakaznici"></div>
     </div>
 
-    <div class="admin-sekce hidden" id="admin-sekce">
+    <div class="sekce hidden" id="admin-sekce">
         <div class="datum" id="datum-admin"></div>
         <div class="mesic-ovladani">
             <button onclick="predchoziMesic()">Předchozí měsíc</button>
@@ -74,16 +81,20 @@
             <input type="date" id="vyber-dne-admin" onchange="zmenitDenAdmin(this.value)">
         </div>
         <div class="terminy" id="terminy-admin"></div>
+        <div class="search-bar">
+            <input type="text" id="search-users" placeholder="Hledat uživatele..." oninput="prohledatUzivatele()">
+        </div>
+        <div class="user-list" id="user-list"></div>
     </div>
 
-    <div id="prihlaseni-form">
+    <div class="formular" id="prihlaseni-form">
         <h3>Přihlášení <span class="zavrit" onclick="zavritPrihlaseni()">×</span></h3>
         <input type="text" id="jmeno" placeholder="Uživatelské jméno">
         <input type="password" id="heslo" placeholder="Heslo">
         <button onclick="prihlasit()">Přihlásit se</button>
     </div>
 
-    <div id="registrace-form">
+    <div class="formular" id="registrace-form">
         <h3>Registrace <span class="zavrit" onclick="zavritRegistraci()">×</span></h3>
         <input type="text" id="reg-jmeno" placeholder="Uživatelské jméno" required>
         <input type="email" id="reg-email" placeholder="E-mail" required>
@@ -92,20 +103,25 @@
         <button onclick="registrovat()">Registrovat se</button>
     </div>
 
-    <div id="rezervace-form">
+    <div class="formular" id="rezervace-form">
         <h3>Nová rezervace <span class="zavrit" onclick="zavritRezervaci()">×</span></h3>
         <input type="text" id="zakaznik" placeholder="Jméno zákazníka" required>
-        <input type="text" id="zvire" placeholder="Jméno zvířete" required>
+        <select id="zvire" required>
+            <option value="">Vyberte zvíře</option>
+        </select>
         <input type="text" id="duvod" placeholder="Důvod návštěvy" required>
         <input type="text" id="telefon" placeholder="Telefon (volitelné)">
         <input type="email" id="email" placeholder="E-mail (volitelné)">
+        <textarea id="poznamka" placeholder="Poznámka k rezervaci"></textarea>
         <button onclick="ulozitRezervaci()">Uložit</button>
     </div>
 
-    <div id="editace-form">
+    <div class="formular" id="editace-form">
         <h3>Upravit rezervaci <span class="zavrit" onclick="zavritEditaci()">×</span></h3>
         <input type="text" id="edit-zakaznik" placeholder="Jméno zákazníka" required>
-        <input type="text" id="edit-zvire" placeholder="Jméno zvířete" required>
+        <select id="edit-zvire" required>
+            <option value="">Vyberte zvíře</option>
+        </select>
         <input type="text" id="edit-duvod" placeholder="Důvod návštěvy" required>
         <input type="text" id="edit-telefon" placeholder="Telefon (volitelné)">
         <input type="email" id="edit-email" placeholder="E-mail (volitelné)">
@@ -124,9 +140,36 @@
             <option value="14:00">14:00</option><option value="14:30">14:30</option><option value="15:00">15:00</option>
             <option value="15:30">15:30</option><option value="16:00">16:00</option>
         </select>
+        <textarea id="edit-poznamka" placeholder="Poznámka k rezervaci"></textarea>
         <button onclick="ulozitEditaci()">Uložit změny</button>
         <button class="smazat-btn" onclick="smazatRezervaci()">Smazat rezervaci</button>
         <button class="schvalit-btn hidden" id="schvalit-btn" onclick="schvalitRezervaci()">Schválit rezervaci</button>
+    </div>
+
+    <div class="formular" id="profil-form">
+        <h3>Profil <span class="zavrit" onclick="zavritProfil()">×</span></h3>
+        <input type="text" id="profil-jmeno" placeholder="Jméno" disabled>
+        <input type="email" id="profil-email" placeholder="E-mail" disabled>
+        <input type="text" id="profil-telefon" placeholder="Telefon" disabled>
+        <input type="password" id="profil-heslo" placeholder="Nové heslo (volitelné)">
+        <div class="pet-list" id="pet-list"></div>
+        <input type="text" id="novy-mazlicek" placeholder="Jméno nového mazlíčka">
+        <button onclick="pridatMazlicka()">Přidat mazlíčka</button>
+        <div class="notes-list" id="profil-notes"></div>
+        <textarea id="nova-poznamka" placeholder="Nová poznámka"></textarea>
+        <button onclick="pridatPoznamku()">Přidat poznámku</button>
+    </div>
+
+    <div class="formular" id="edit-user-form">
+        <h3>Upravit uživatele <span class="zavrit" onclick="zavritEditUser()">×</span></h3>
+        <input type="text" id="edit-user-jmeno" placeholder="Jméno" disabled>
+        <input type="email" id="edit-user-email" placeholder="E-mail" disabled>
+        <input type="text" id="edit-user-telefon" placeholder="Telefon" disabled>
+        <input type="password" id="edit-user-heslo" placeholder="Nové heslo">
+        <div class="notes-list" id="edit-user-notes"></div>
+        <textarea id="edit-user-poznamka" placeholder="Nová poznámka"></textarea>
+        <button onclick="pridatPoznamkuAdmin()">Přidat poznámku</button>
+        <button onclick="ulozitHeslo()">Změnit heslo</button>
     </div>
 
     <script>
@@ -135,11 +178,28 @@
         let jeAdmin = false;
         let token = null;
         let userId = null;
+        let userPets = [];
         const casy = ["8:00", "8:30", "9:00", "9:30", "10:00", "10:30", "11:00", "11:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30"];
 
         async function fetchReservations(date) {
             const response = await fetch(`/reservations/${date}`, {
                 headers: jePrihlasen ? { 'Authorization': `Bearer ${token}` } : {}
+            });
+            return await response.json();
+        }
+
+        async function fetchUserData() {
+            const response = await fetch('/profile', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+            userPets = data.pets || [];
+            return data;
+        }
+
+        async function fetchUsers(search = '') {
+            const response = await fetch(`/users?search=${search}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
             });
             return await response.json();
         }
@@ -159,6 +219,7 @@
             datumAdmin.textContent = `Správa rezervací na ${vybranyDen.toLocaleDateString('cs-CZ', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`;
             await aktualizovatMesicKalendar();
             await aktualizovatTerminy('terminy-admin', true);
+            await prohledatUzivatele();
         }
 
         async function aktualizovatMesicKalendar() {
@@ -218,6 +279,7 @@
                     let text = `${reservation.zakaznik} (${reservation.zvire}) - ${reservation.duvod}`;
                     if (reservation.telefon) text += `\nTel: ${reservation.telefon}`;
                     if (reservation.email) text += `\nEmail: ${reservation.email}`;
+                    if (reservation.note) text += `\nPoznámka: ${reservation.note}`;
                     if (!reservation.approved) text += `\n(Čeká na schválení)`;
                     podrobnosti.textContent = text;
                     div.appendChild(podrobnosti);
@@ -236,6 +298,20 @@
                 });
 
                 terminyList.appendChild(div);
+            });
+        }
+
+        async function prohledatUzivatele() {
+            if (!jeAdmin) return;
+            const search = document.getElementById('search-users').value;
+            const users = await fetchUsers(search);
+            const userList = document.getElementById('user-list');
+            userList.innerHTML = '';
+            users.forEach(user => {
+                const div = document.createElement('div');
+                div.classList.add('user-item');
+                div.innerHTML = `${user.username} (${user.email}) <button onclick="upravitUzivatele(${user.id})">Upravit</button>`;
+                userList.appendChild(div);
             });
         }
 
@@ -261,8 +337,6 @@
 
         function zobrazitPrihlaseni() {
             document.getElementById('prihlaseni-form').style.display = 'block';
-            document.getElementById('jmeno').value = '';
-            document.getElementById('heslo').value = '';
         }
 
         function zavritPrihlaseni() {
@@ -271,10 +345,6 @@
 
         function zobrazitRegistraci() {
             document.getElementById('registrace-form').style.display = 'block';
-            document.getElementById('reg-jmeno').value = '';
-            document.getElementById('reg-email').value = '';
-            document.getElementById('reg-telefon').value = '';
-            document.getElementById('reg-heslo').value = '';
         }
 
         function zavritRegistraci() {
@@ -296,6 +366,7 @@
                 userId = result.userId;
                 jeAdmin = result.isAdmin;
                 document.getElementById('prihlaseni-form').style.display = 'none';
+                document.getElementById('profil-btn').classList.remove('hidden');
                 document.getElementById('odhlaseni-btn').classList.remove('hidden');
                 if (jeAdmin) {
                     document.getElementById('zakaznici-sekce').classList.add('hidden');
@@ -325,10 +396,10 @@
                     alert("Registrace úspěšná! Nyní se můžete přihlásit.");
                     zavritRegistraci();
                 } else {
-                    alert(result.message || "Registrace selhala. Zkuste to znovu.");
+                    alert(result.message || "Registrace selhala.");
                 }
             } else {
-                alert("Vyplňte všechna povinná pole!");
+                alert("Vyplňte všechna pole!");
             }
         }
 
@@ -337,20 +408,29 @@
             jeAdmin = false;
             token = null;
             userId = null;
+            userPets = [];
             document.getElementById('zakaznici-sekce').classList.remove('hidden');
             document.getElementById('admin-sekce').classList.add('hidden');
+            document.getElementById('profil-btn').classList.add('hidden');
             document.getElementById('odhlaseni-btn').classList.add('hidden');
             aktualizovatZakaznici();
         }
 
-        function zobrazitRezervaci() {
+        async function zobrazitRezervaci() {
             if (!jePrihlasen) return alert("Musíte být přihlášeni!");
+            const userData = await fetchUserData();
             document.getElementById('rezervace-form').style.display = 'block';
-            document.getElementById('zakaznik').value = '';
-            document.getElementById('zvire').value = '';
-            document.getElementById('duvod').value = '';
-            document.getElementById('telefon').value = '';
-            document.getElementById('email').value = '';
+            document.getElementById('zakaznik').value = userData.username;
+            document.getElementById('telefon').value = userData.telefon;
+            document.getElementById('email').value = userData.email;
+            const zvireSelect = document.getElementById('zvire');
+            zvireSelect.innerHTML = '<option value="">Vyberte zvíře</option>';
+            userPets.forEach(pet => {
+                const option = document.createElement('option');
+                option.value = pet;
+                option.textContent = pet;
+                zvireSelect.appendChild(option);
+            });
         }
 
         function zavritRezervaci() {
@@ -358,12 +438,12 @@
         }
 
         async function ulozitRezervaci() {
-            if (!jePrihlasen) return alert("Musíte být přihlášeni!");
             const zakaznik = document.getElementById('zakaznik').value;
             const zvire = document.getElementById('zvire').value;
             const duvod = document.getElementById('duvod').value;
             const telefon = document.getElementById('telefon').value;
             const email = document.getElementById('email').value;
+            const note = document.getElementById('poznamka').value;
             if (zakaznik && zvire && duvod) {
                 const reservation = {
                     date: vybranyTermin.date,
@@ -372,7 +452,8 @@
                     zvire,
                     duvod,
                     telefon,
-                    email
+                    email,
+                    note
                 };
                 const response = await fetch('/reservations', {
                     method: 'POST',
@@ -384,27 +465,38 @@
                 });
                 if (response.ok) {
                     document.getElementById('rezervace-form').style.display = 'none';
+                    alert("Rezervace uložena. Vyčkejte na schválení.");
                     if (jeAdmin) aktualizovatAdmin();
                     else aktualizovatZakaznici();
                 } else {
-                    alert("Nepodařilo se uložit rezervaci. Zkuste to znovu.");
+                    alert("Nepodařilo se uložit rezervaci.");
                 }
             } else {
-                alert("Vyplňte povinné údaje (jméno, zvíře, důvod)!");
+                alert("Vyplňte povinné údaje!");
             }
         }
 
-        function zobrazitEditaci() {
+        async function zobrazitEditaci() {
             if (!jePrihlasen) return alert("Musíte být přihlášeni!");
             if (!jeAdmin && vybranyTermin.userId !== userId) return alert("Můžete upravit pouze své rezervace!");
+            const userData = await fetchUserData();
             document.getElementById('editace-form').style.display = 'block';
             document.getElementById('edit-zakaznik').value = vybranyTermin.zakaznik;
-            document.getElementById('edit-zvire').value = vybranyTermin.zvire;
+            const zvireSelect = document.getElementById('edit-zvire');
+            zvireSelect.innerHTML = '<option value="">Vyberte zvíře</option>';
+            userPets.forEach(pet => {
+                const option = document.createElement('option');
+                option.value = pet;
+                option.textContent = pet;
+                option.selected = pet === vybranyTermin.zvire;
+                zvireSelect.appendChild(option);
+            });
             document.getElementById('edit-duvod').value = vybranyTermin.duvod;
             document.getElementById('edit-telefon').value = vybranyTermin.telefon || '';
             document.getElementById('edit-email').value = vybranyTermin.email || '';
             document.getElementById('edit-cas-zacatek').value = vybranyTermin.time;
             document.getElementById('edit-cas-konec').value = vybranyTermin.timeEnd || '';
+            document.getElementById('edit-poznamka').value = vybranyTermin.note || '';
             document.getElementById('schvalit-btn').classList.toggle('hidden', vybranyTermin.approved || !jeAdmin);
         }
 
@@ -413,8 +505,6 @@
         }
 
         async function ulozitEditaci() {
-            if (!jePrihlasen) return alert("Musíte být přihlášeni!");
-            if (!jeAdmin && vybranyTermin.userId !== userId) return alert("Můžete upravit pouze své rezervace!");
             const zakaznik = document.getElementById('edit-zakaznik').value;
             const zvire = document.getElementById('edit-zvire').value;
             const duvod = document.getElementById('edit-duvod').value;
@@ -422,6 +512,7 @@
             const email = document.getElementById('edit-email').value;
             const time = document.getElementById('edit-cas-zacatek').value;
             const timeEnd = document.getElementById('edit-cas-konec').value;
+            const note = document.getElementById('edit-poznamka').value;
 
             if (zakaznik && zvire && duvod) {
                 const reservation = {
@@ -431,7 +522,8 @@
                     zvire,
                     duvod,
                     telefon,
-                    email
+                    email,
+                    note
                 };
                 const response = await fetch(`/reservations/${vybranyTermin.id}`, {
                     method: 'PUT',
@@ -446,15 +538,14 @@
                     if (jeAdmin) aktualizovatAdmin();
                     else aktualizovatZakaznici();
                 } else {
-                    alert("Nepodařilo se uložit změny. Zkuste to znovu.");
+                    alert("Nepodařilo se uložit změny.");
                 }
             } else {
-                alert("Vyplňte povinné údaje (jméno, zvíře, důvod)!");
+                alert("Vyplňte povinné údaje!");
             }
         }
 
         async function smazatRezervaci() {
-            if (!jePrihlasen) return alert("Musíte být přihlášeni!");
             if (!jeAdmin && vybranyTermin.userId !== userId) return alert("Můžete smazat pouze své rezervace!");
             const potvrzeni = confirm(`Opravdu chcete smazat rezervaci pro ${vybranyTermin.zakaznik}?`);
             if (potvrzeni) {
@@ -467,7 +558,7 @@
                     if (jeAdmin) aktualizovatAdmin();
                     else aktualizovatZakaznici();
                 } else {
-                    alert('Nepodařilo se smazat rezervaci. Zkuste to znovu.');
+                    alert('Nepodařilo se smazat rezervaci.');
                 }
             }
         }
@@ -482,7 +573,143 @@
                 document.getElementById('editace-form').style.display = 'none';
                 aktualizovatAdmin();
             } else {
-                alert('Nepodařilo se schválit rezervaci. Zkuste to znovu.');
+                alert('Nepodařilo se schválit rezervaci.');
+            }
+        }
+
+        async function zobrazitProfil() {
+            const userData = await fetchUserData();
+            document.getElementById('profil-form').style.display = 'block';
+            document.getElementById('profil-jmeno').value = userData.username;
+            document.getElementById('profil-email').value = userData.email;
+            document.getElementById('profil-telefon').value = userData.telefon;
+            document.getElementById('profil-heslo').value = '';
+            const petList = document.getElementById('pet-list');
+            petList.innerHTML = '';
+            userPets.forEach(pet => {
+                const div = document.createElement('div');
+                div.classList.add('pet-item');
+                div.textContent = pet;
+                petList.appendChild(div);
+            });
+            const notesList = document.getElementById('profil-notes');
+            notesList.innerHTML = '';
+            userData.notes.forEach(note => {
+                const div = document.createElement('div');
+                div.classList.add('note-item');
+                div.textContent = `${note.author}: ${note.text}`;
+                notesList.appendChild(div);
+            });
+        }
+
+        function zavritProfil() {
+            document.getElementById('profil-form').style.display = 'none';
+        }
+
+        async function pridatMazlicka() {
+            const novyMazlicek = document.getElementById('novy-mazlicek').value;
+            if (novyMazlicek) {
+                const response = await fetch('/profile/pets', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ pet: novyMazlicek })
+                });
+                if (response.ok) {
+                    userPets.push(novyMazlicek);
+                    document.getElementById('novy-mazlicek').value = '';
+                    zobrazitProfil();
+                } else {
+                    alert("Nepodařilo se přidat mazlíčka.");
+                }
+            }
+        }
+
+        async function pridatPoznamku() {
+            const novaPoznamka = document.getElementById('nova-poznamka').value;
+            if (novaPoznamka) {
+                const response = await fetch('/profile/notes', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ note: novaPoznamka })
+                });
+                if (response.ok) {
+                    document.getElementById('nova-poznamka').value = '';
+                    zobrazitProfil();
+                } else {
+                    alert("Nepodařilo se přidat poznámku.");
+                }
+            }
+        }
+
+        let vybranyUzivatel = null;
+        async function upravitUzivatele(id) {
+            vybranyUzivatel = id;
+            const response = await fetch(`/users/${id}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const user = await response.json();
+            document.getElementById('edit-user-form').style.display = 'block';
+            document.getElementById('edit-user-jmeno').value = user.username;
+            document.getElementById('edit-user-email').value = user.email;
+            document.getElementById('edit-user-telefon').value = user.telefon;
+            document.getElementById('edit-user-heslo').value = '';
+            const notesList = document.getElementById('edit-user-notes');
+            notesList.innerHTML = '';
+            user.notes.forEach(note => {
+                const div = document.createElement('div');
+                div.classList.add('note-item');
+                div.textContent = `${note.author}: ${note.text}`;
+                notesList.appendChild(div);
+            });
+        }
+
+        function zavritEditUser() {
+            document.getElementById('edit-user-form').style.display = 'none';
+        }
+
+        async function ulozitHeslo() {
+            const heslo = document.getElementById('edit-user-heslo').value;
+            if (heslo) {
+                const response = await fetch(`/users/${vybranyUzivatel}/password`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ password: heslo })
+                });
+                if (response.ok) {
+                    alert("Heslo změněno.");
+                    document.getElementById('edit-user-heslo').value = '';
+                } else {
+                    alert("Nepodařilo se změnit heslo.");
+                }
+            }
+        }
+
+        async function pridatPoznamkuAdmin() {
+            const novaPoznamka = document.getElementById('edit-user-poznamka').value;
+            if (novaPoznamka) {
+                const response = await fetch(`/users/${vybranyUzivatel}/notes`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ note: novaPoznamka })
+                });
+                if (response.ok) {
+                    document.getElementById('edit-user-poznamka').value = '';
+                    upravitUzivatele(vybranyUzivatel);
+                } else {
+                    alert("Nepodařilo se přidat poznámku.");
+                }
             }
         }
 
