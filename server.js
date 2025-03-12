@@ -112,11 +112,11 @@ app.get('/profile', authenticateToken, (req, res) => {
 });
 
 app.post('/profile/pets', authenticateToken, (req, res) => {
-    const { pet } = req.body;
+    const { name, species } = req.body;
     db.get('SELECT pets FROM users WHERE id = ?', [req.user.id], (err, row) => {
         if (err) return res.status(500).json({ error: err.message });
         const pets = JSON.parse(row.pets);
-        pets.push(pet);
+        pets.push({ name, species });
         db.run('UPDATE users SET pets = ? WHERE id = ?', [JSON.stringify(pets), req.user.id], (err) => {
             if (err) return res.status(500).json({ error: err.message });
             res.json({ success: true });
