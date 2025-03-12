@@ -149,14 +149,15 @@ app.get('/users', authenticateToken, (req, res) => {
 
 app.get('/users/:id', authenticateToken, (req, res) => {
     if (!req.user.isAdmin) return res.status(403).json({ error: 'Pouze admin.' });
-    db.get('SELECT username, email, telefon, notes FROM users WHERE id = ?', [req.params.id], (err, user) => {
+    db.get('SELECT username, email, telefon, notes, pets FROM users WHERE id = ?', [req.params.id], (err, user) => {
         if (err) return res.status(500).json({ error: err.message });
         if (!user) return res.status(404).json({ error: 'Uživatel nenalezen.' });
         res.json({
             username: user.username,
             email: user.email,
             telefon: user.telefon,
-            notes: JSON.parse(user.notes)
+            notes: JSON.parse(user.notes),
+            pets: user.pets
         });
     });
 });
@@ -203,15 +204,49 @@ app.get('/reservations/:date', (req, res) => {
     });
 });
 
-app.post('/reservations', authenticateToken, (req, res) => {
-    const { date, time, timeEnd, zakaznik, zvire, duvod, telefon, email, note } = req.body;
+app.post('/reservations', authenticateToken, async (req, res) => {
+    const { date, time, timeEnd, zakaznik, zvire, duvod, telefon, email, note, userId } = req.body;
     const approved = req.user.isAdmin ? 1 : 0;
-    db.run('INSERT INTO reservations (date, time, timeEnd, zakaznik, zvire, duvod, telefon, email, userId, approved, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [date, time, timeEnd || null, zakaznik, zvire || null, duvod, telefon || null, email || null, req.user.id, approved, note || null],
-        function(err) {
-            if (err) return res.status(500).json({ error: err.message });
-            res.json({ id: this.lastID });
-        });
+    let finalUserId = userId || req.user.id;
+
+    if (req.user.isAdmin && !userId) {
+        // Vytvoření nového uživatele, pokud neexistuje
+        const username = zakaznik || `zakaznik_${Date.now()}`;
+        const userEmail = email || `${username}@example.com`;
+        const userTelefon = telefon || '000000000';
+        const hashedPassword = await bcrypt.hash('default123', 10); // Výchozí heslo pro nové uživatele
+
+        db.run('INSERT OR IGNORE INTO users (username, email, telefon, password) VALUES (?, ?, ?, ?)',
+            [username, userEmail, userTelefon, hashedPassword],
+            function(err) {
+                if (err) {
+                    if (err.code === 'SQLITE_CONSTRAINT') {
+                        // Pokud uživatel už existuje, najdeme jeho ID
+                        db.get('SELECT id FROM users WHERE username = ?', [username], (err, row) => {
+                            if (err) return res.status(500).json({ error: err.message });
+                            finalUserId = row.id;
+                            vlozitRezervaci(finalUserId);
+                        });
+                    } else {
+                        return res.status(500).json({ error: err.message });
+                    }
+                } else {
+                    finalUserId = this.lastID;
+                    vlozitRezervaci(finalUserId);
+                }
+            });
+    } else {
+        vlozitRezervaci(finalUserId);
+    }
+
+    function vlozitRezervaci(userId) {
+        db.run('INSERT INTO reservations (date, time, timeEnd, zakaznik, zvire, duvod, telefon, email, userId, approved, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [date, time, timeEnd || null, zakaznik, zvire || null, duvod, telefon || null, email || null, userId, approved, note || null],
+            function(err) {
+                if (err) return res.status(500).json({ error: err.message });
+                res.json({ id: this.lastID });
+            });
+    }
 });
 
 app.put('/reservations/:id', authenticateToken, (req, res) => {
