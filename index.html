@@ -14,7 +14,7 @@
         .sekce { max-width: 1000px; margin: 20px auto; padding: 20px; background-color: white; border-radius: 5px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
         .datum { text-align: center; font-size: 1.2em; margin-bottom: 20px; }
         .vyber-datum { text-align: center; margin-bottom: 20px; }
-        .vyber-datum input[type="date"] { padding: 8px; font-size: 1em; border: 1px solid #ddd; border-radius: 5px; }
+        .vyber-datum input[type="date"] { padding: 10px; font-size: 1em; border: 1px solid #ddd; border-radius: 5px; width: 360px; height: 40px; }
         .mesic-kalendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; text-align: center; margin-bottom: 20px; }
         .den { padding: 10px; border: 1px solid #ddd; border-radius: 5px; cursor: pointer; }
         .den.volny { background-color: #4CAF50; color: white; }
@@ -35,8 +35,9 @@
         .formular { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: white; padding: 20px; border-radius: 5px; box-shadow: 0 0 10px rgba(0,0,0,0.3); width: 400px; }
         .formular h3 { margin: 0 0 20px 0; text-align: center; }
         .formular .zavrit { position: absolute; right: 10px; top: 5px; font-size: 20px; cursor: pointer; color: #f44336; }
-        .formular input, .formular select, .formular textarea { display: block; width: calc(100% - 20px); margin: 10px auto; padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
-        .formular button { display: block; width: calc(100% - 20px); margin: 10px auto; padding: 10px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .formular input, .formular select, .formular textarea { display: block; width: 360px; height: 40px; margin: 10px auto; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
+        .formular textarea { height: 80px; }
+        .formular button { display: block; width: 360px; height: 40px; margin: 10px auto; padding: 10px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; }
         .formular .smazat-btn { background-color: #f44336; }
         .formular .schvalit-btn { background-color: #2196F3; }
         .formular button:hover { background-color: #45a049; }
@@ -44,7 +45,7 @@
         .formular .schvalit-btn:hover { background-color: #1976D2; }
         .hidden { display: none; }
         .search-bar { margin: 20px 0; text-align: center; }
-        .search-bar input { width: 50%; padding: 10px; }
+        .search-bar input { width: 360px; height: 40px; padding: 10px; }
         .user-list, .notes-list, .reservations-list { margin-top: 20px; }
         .user-item, .note-item, .reservation-item { padding: 10px; border-bottom: 1px solid #ddd; }
         .pet-list { margin-top: 10px; }
@@ -105,11 +106,11 @@
 
     <div class="formular" id="rezervace-form">
         <h3>Nová rezervace <span class="zavrit" onclick="zavritRezervaci()">×</span></h3>
-        <select id="zakaznik-select" onchange="vyplnitUdajeZakaznika()" required>
+        <select id="zakaznik-select" onchange="vyplnitUdajeZakaznika()" required class="hidden">
             <option value="">Vyberte zákazníka</option>
             <option value="novy">Nový zákazník</option>
         </select>
-        <input type="text" id="zakaznik" placeholder="Jméno zákazníka" required>
+        <input type="text" id="zakaznik" placeholder="Jméno zákazníka" required disabled>
         <select id="zvire" class="zvire-select"></select>
         <input type="text" id="duvod" placeholder="Důvod návštěvy" required>
         <input type="text" id="telefon" placeholder="Telefon (volitelné)">
@@ -148,7 +149,16 @@
 
     <div class="formular" id="pridani-mazlicka-form">
         <h3>Přidat mazlíčka <span class="zavrit" onclick="zavritPridaniMazlicka()">×</span></h3>
-        <input type="text" id="novy-mazlicek" placeholder="Jméno nového mazlíčka">
+        <input type="text" id="novy-mazlicek" placeholder="Jméno mazlíčka">
+        <select id="druh-zvirete" onchange="zobrazitJine()">
+            <option value="">Vyberte druh</option>
+            <option value="Pes">Pes</option>
+            <option value="Kočka">Kočka</option>
+            <option value="Králík">Králík</option>
+            <option value="Morče">Morče</option>
+            <option value="Jiné">Jiné</option>
+        </select>
+        <input type="text" id="jine-zvire" placeholder="Zadejte druh" class="hidden">
         <button onclick="pridatMazlicka()">Přidat</button>
     </div>
 
@@ -205,10 +215,10 @@
         }
 
         async function aktualizovatZakaznici() {
-            const datumZakaznici = document.getElementById('datum-zakaznici');
+            const DatumZakaznici = document.getElementById('datum-zakaznici');
             const vyberDne = document.getElementById('vyber-dne');
             vyberDne.value = vybranyDen.toISOString().split('T')[0];
-            datumZakaznici.textContent = `Rezervace na ${vybranyDen.toLocaleDateString('cs-CZ', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`;
+            DatumZakaznici.textContent = `Rezervace na ${vybranyDen.toLocaleDateString('cs-CZ', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`;
             await aktualizovatTerminy('terminy-zakaznici', false);
         }
 
@@ -436,11 +446,11 @@
                 document.getElementById('zakaznik-select').classList.remove('hidden');
             }
             const zvireSelect = document.getElementById('zvire');
-            zvireSelect.innerHTML = '<option value="">Bez zvířete</option>';
+            zvireSelect.innerHTML = '<option value="">Vyberte mazlíčka</option>';
             userPets.forEach(pet => {
                 const option = document.createElement('option');
-                option.value = pet;
-                option.textContent = pet;
+                option.value = pet.name;
+                option.textContent = `${pet.name} (${pet.species})`;
                 zvireSelect.appendChild(option);
             });
             zvireSelect.removeAttribute('required');
@@ -469,8 +479,8 @@
                     zvireSelect.innerHTML = '<option value="">Bez zvířete</option>';
                     JSON.parse(user.pets).forEach(pet => {
                         const option = document.createElement('option');
-                        option.value = pet;
-                        option.textContent = pet;
+                        option.value = pet.name;
+                        option.textContent = `${pet.name} (${pet.species})`;
                         zvireSelect.appendChild(option);
                     });
                 });
@@ -482,7 +492,7 @@
         }
 
         async function ulozitRezervaci() {
-            const zakaznikSelect = document.getElementById('zakaznik-select').value;
+            const zakaznikSelect = jeAdmin ? document.getElementById('zakaznik-select').value : null;
             const zakaznik = document.getElementById('zakaznik').value;
             const zvire = document.getElementById('zvire').value || null;
             const duvod = document.getElementById('duvod').value;
@@ -531,12 +541,12 @@
             document.getElementById('editace-form').style.display = 'block';
             document.getElementById('edit-zakaznik').value = vybranyTermin.zakaznik;
             const zvireSelect = document.getElementById('edit-zvire');
-            zvireSelect.innerHTML = '<option value="">Bez zvířete</option>';
+            zvireSelect.innerHTML = '<option value="">Vyberte mazlíčka</option>';
             userPets.forEach(pet => {
                 const option = document.createElement('option');
-                option.value = pet;
-                option.textContent = pet;
-                option.selected = pet === vybranyTermin.zvire;
+                option.value = pet.name;
+                option.textContent = `${pet.name} (${pet.species})`;
+                option.selected = pet.name === vybranyTermin.zvire;
                 zvireSelect.appendChild(option);
             });
             zvireSelect.removeAttribute('required');
@@ -629,30 +639,47 @@
 
         function zobrazitPridaniMazlicka() {
             document.getElementById('pridani-mazlicka-form').style.display = 'block';
+            document.getElementById('jine-zvire').classList.add('hidden');
         }
 
         function zavritPridaniMazlicka() {
             document.getElementById('pridani-mazlicka-form').style.display = 'none';
         }
 
+        function zobrazitJine() {
+            const druh = document.getElementById('druh-zvirete').value;
+            const jineZvire = document.getElementById('jine-zvire');
+            jineZvire.classList.toggle('hidden', druh !== 'Jiné');
+        }
+
         async function pridatMazlicka() {
-            const novyMazlicek = document.getElementById('novy-mazlicek').value;
-            if (novyMazlicek) {
+            const jmeno = document.getElementById('novy-mazlicek').value;
+            let druh = document.getElementById('druh-zvirete').value;
+            const jineZvire = document.getElementById('jine-zvire').value;
+
+            if (jmeno && (druh || jineZvire)) {
+                if (druh === 'Jiné') druh = jineZvire;
+                const pet = { name: jmeno, species: druh };
                 const response = await fetch('/profile/pets', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${token}`
                     },
-                    body: JSON.stringify({ pet: novyMazlicek })
+                    body: JSON.stringify(pet)
                 });
                 if (response.ok) {
-                    userPets.push(novyMazlicek);
+                    userPets.push(pet);
                     document.getElementById('novy-mazlicek').value = '';
+                    document.getElementById('druh-zvirete').value = '';
+                    document.getElementById('jine-zvire').value = '';
+                    document.getElementById('jine-zvire').classList.add('hidden');
                     zavritPridaniMazlicka();
                 } else {
                     alert("Nepodařilo se přidat mazlíčka.");
                 }
+            } else {
+                alert("Vyplňte jméno a druh mazlíčka!");
             }
         }
 
