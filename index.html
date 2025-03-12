@@ -45,8 +45,8 @@
         .hidden { display: none; }
         .search-bar { margin: 20px 0; text-align: center; }
         .search-bar input { width: 50%; padding: 10px; }
-        .user-list, .notes-list { margin-top: 20px; }
-        .user-item, .note-item { padding: 10px; border-bottom: 1px solid #ddd; }
+        .user-list, .notes-list, .reservations-list { margin-top: 20px; }
+        .user-item, .note-item, .reservation-item { padding: 10px; border-bottom: 1px solid #ddd; }
         .pet-list { margin-top: 10px; }
         .pet-item { padding: 5px; border: 1px solid #ddd; border-radius: 5px; margin-bottom: 5px; }
     </style>
@@ -106,9 +106,7 @@
     <div class="formular" id="rezervace-form">
         <h3>Nová rezervace <span class="zavrit" onclick="zavritRezervaci()">×</span></h3>
         <input type="text" id="zakaznik" placeholder="Jméno zákazníka" required>
-        <select id="zvire" required>
-            <option value="">Vyberte zvíře</option>
-        </select>
+        <select id="zvire" class="zvire-select"></select>
         <input type="text" id="duvod" placeholder="Důvod návštěvy" required>
         <input type="text" id="telefon" placeholder="Telefon (volitelné)">
         <input type="email" id="email" placeholder="E-mail (volitelné)">
@@ -119,9 +117,7 @@
     <div class="formular" id="editace-form">
         <h3>Upravit rezervaci <span class="zavrit" onclick="zavritEditaci()">×</span></h3>
         <input type="text" id="edit-zakaznik" placeholder="Jméno zákazníka" required>
-        <select id="edit-zvire" required>
-            <option value="">Vyberte zvíře</option>
-        </select>
+        <select id="edit-zvire" class="zvire-select"></select>
         <input type="text" id="edit-duvod" placeholder="Důvod návštěvy" required>
         <input type="text" id="edit-telefon" placeholder="Telefon (volitelné)">
         <input type="email" id="edit-email" placeholder="E-mail (volitelné)">
@@ -158,6 +154,7 @@
         <div class="notes-list" id="profil-notes"></div>
         <textarea id="nova-poznamka" placeholder="Nová poznámka"></textarea>
         <button onclick="pridatPoznamku()">Přidat poznámku</button>
+        <div class="reservations-list" id="profil-reservations"></div>
     </div>
 
     <div class="formular" id="edit-user-form">
@@ -170,6 +167,7 @@
         <textarea id="edit-user-poznamka" placeholder="Nová poznámka"></textarea>
         <button onclick="pridatPoznamkuAdmin()">Přidat poznámku</button>
         <button onclick="ulozitHeslo()">Změnit heslo</button>
+        <div class="reservations-list" id="edit-user-reservations"></div>
     </div>
 
     <script>
@@ -199,6 +197,13 @@
 
         async function fetchUsers(search = '') {
             const response = await fetch(`/users?search=${search}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return await response.json();
+        }
+
+        async function fetchUserReservations(userId) {
+            const response = await fetch(`/users/${userId}/reservations`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             return await response.json();
@@ -276,7 +281,7 @@
                 if (reservation && (editMode || (jePrihlasen && reservation.userId === userId))) {
                     const podrobnosti = document.createElement('div');
                     podrobnosti.classList.add('podrobnosti');
-                    let text = `${reservation.zakaznik} (${reservation.zvire}) - ${reservation.duvod}`;
+                    let text = `${reservation.zakaznik} (${reservation.zvire || 'Bez zvířete'}) - ${reservation.duvod}`;
                     if (reservation.telefon) text += `\nTel: ${reservation.telefon}`;
                     if (reservation.email) text += `\nEmail: ${reservation.email}`;
                     if (reservation.note) text += `\nPoznámka: ${reservation.note}`;
@@ -424,13 +429,15 @@
             document.getElementById('telefon').value = userData.telefon;
             document.getElementById('email').value = userData.email;
             const zvireSelect = document.getElementById('zvire');
-            zvireSelect.innerHTML = '<option value="">Vyberte zvíře</option>';
+            zvireSelect.innerHTML = '<option value="">Bez zvířete</option>';
             userPets.forEach(pet => {
                 const option = document.createElement('option');
                 option.value = pet;
                 option.textContent = pet;
                 zvireSelect.appendChild(option);
             });
+            zvireSelect.removeAttribute('required');
+            if (!jeAdmin) zvireSelect.setAttribute('required', '');
         }
 
         function zavritRezervaci() {
@@ -439,12 +446,12 @@
 
         async function ulozitRezervaci() {
             const zakaznik = document.getElementById('zakaznik').value;
-            const zvire = document.getElementById('zvire').value;
+            const zvire = document.getElementById('zvire').value || null;
             const duvod = document.getElementById('duvod').value;
             const telefon = document.getElementById('telefon').value;
             const email = document.getElementById('email').value;
             const note = document.getElementById('poznamka').value;
-            if (zakaznik && zvire && duvod) {
+            if (zakaznik && duvod && (jeAdmin || zvire)) {
                 const reservation = {
                     date: vybranyTermin.date,
                     time: vybranyTermin.time,
@@ -465,7 +472,7 @@
                 });
                 if (response.ok) {
                     document.getElementById('rezervace-form').style.display = 'none';
-                    alert("Rezervace uložena. Vyčkejte na schválení.");
+                    if (!jeAdmin) alert("Rezervace uložena. Vyčkejte na schválení.");
                     if (jeAdmin) aktualizovatAdmin();
                     else aktualizovatZakaznici();
                 } else {
@@ -483,7 +490,7 @@
             document.getElementById('editace-form').style.display = 'block';
             document.getElementById('edit-zakaznik').value = vybranyTermin.zakaznik;
             const zvireSelect = document.getElementById('edit-zvire');
-            zvireSelect.innerHTML = '<option value="">Vyberte zvíře</option>';
+            zvireSelect.innerHTML = '<option value="">Bez zvířete</option>';
             userPets.forEach(pet => {
                 const option = document.createElement('option');
                 option.value = pet;
@@ -491,6 +498,8 @@
                 option.selected = pet === vybranyTermin.zvire;
                 zvireSelect.appendChild(option);
             });
+            zvireSelect.removeAttribute('required');
+            if (!jeAdmin) zvireSelect.setAttribute('required', '');
             document.getElementById('edit-duvod').value = vybranyTermin.duvod;
             document.getElementById('edit-telefon').value = vybranyTermin.telefon || '';
             document.getElementById('edit-email').value = vybranyTermin.email || '';
@@ -506,7 +515,7 @@
 
         async function ulozitEditaci() {
             const zakaznik = document.getElementById('edit-zakaznik').value;
-            const zvire = document.getElementById('edit-zvire').value;
+            const zvire = document.getElementById('edit-zvire').value || null;
             const duvod = document.getElementById('edit-duvod').value;
             const telefon = document.getElementById('edit-telefon').value;
             const email = document.getElementById('edit-email').value;
@@ -514,7 +523,7 @@
             const timeEnd = document.getElementById('edit-cas-konec').value;
             const note = document.getElementById('edit-poznamka').value;
 
-            if (zakaznik && zvire && duvod) {
+            if (zakaznik && duvod && (jeAdmin || zvire)) {
                 const reservation = {
                     time,
                     timeEnd: timeEnd || null,
@@ -600,6 +609,15 @@
                 div.textContent = `${note.author}: ${note.text}`;
                 notesList.appendChild(div);
             });
+            const reservationsList = document.getElementById('profil-reservations');
+            reservationsList.innerHTML = '';
+            const reservations = await fetchUserReservations(userId);
+            reservations.forEach(res => {
+                const div = document.createElement('div');
+                div.classList.add('reservation-item');
+                div.textContent = `${res.date} ${res.time}${res.timeEnd ? ` - ${res.timeEnd}` : ''}: ${res.zvire || 'Bez zvířete'} - ${res.duvod}${res.approved ? '' : ' (Čeká na schválení)'}`;
+                reservationsList.appendChild(div);
+            });
         }
 
         function zavritProfil() {
@@ -666,6 +684,15 @@
                 div.classList.add('note-item');
                 div.textContent = `${note.author}: ${note.text}`;
                 notesList.appendChild(div);
+            });
+            const reservationsList = document.getElementById('edit-user-reservations');
+            reservationsList.innerHTML = '';
+            const reservations = await fetchUserReservations(id);
+            reservations.forEach(res => {
+                const div = document.createElement('div');
+                div.classList.add('reservation-item');
+                div.textContent = `${res.date} ${res.time}${res.timeEnd ? ` - ${res.timeEnd}` : ''}: ${res.zvire || 'Bez zvířete'} - ${res.duvod}${res.approved ? '' : ' (Čeká na schválení)'}`;
+                reservationsList.appendChild(div);
             });
         }
 
