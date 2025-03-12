@@ -57,7 +57,7 @@
         <div class="hlavicka-buttons">
             <button class="prihlaseni-btn" onclick="zobrazitPrihlaseni()">Přihlášení</button>
             <button class="prihlaseni-btn" onclick="zobrazitRegistraci()">Registrace</button>
-            <button class="prihlaseni-btn hidden" id="profil-btn" onclick="zobrazitProfil()">Profil</button>
+            <button class="prihlaseni-btn hidden" id="pridat-mazlicka-btn" onclick="zobrazitPridaniMazlicka()">Přidat mazlíčka</button>
             <button class="prihlaseni-btn hidden" id="odhlaseni-btn" onclick="odhlasit()">Odhlásit</button>
         </div>
     </div>
@@ -105,6 +105,10 @@
 
     <div class="formular" id="rezervace-form">
         <h3>Nová rezervace <span class="zavrit" onclick="zavritRezervaci()">×</span></h3>
+        <select id="zakaznik-select" onchange="vyplnitUdajeZakaznika()" required>
+            <option value="">Vyberte zákazníka</option>
+            <option value="novy">Nový zákazník</option>
+        </select>
         <input type="text" id="zakaznik" placeholder="Jméno zákazníka" required>
         <select id="zvire" class="zvire-select"></select>
         <input type="text" id="duvod" placeholder="Důvod návštěvy" required>
@@ -142,19 +146,10 @@
         <button class="schvalit-btn hidden" id="schvalit-btn" onclick="schvalitRezervaci()">Schválit rezervaci</button>
     </div>
 
-    <div class="formular" id="profil-form">
-        <h3>Profil <span class="zavrit" onclick="zavritProfil()">×</span></h3>
-        <input type="text" id="profil-jmeno" placeholder="Jméno" disabled>
-        <input type="email" id="profil-email" placeholder="E-mail" disabled>
-        <input type="text" id="profil-telefon" placeholder="Telefon" disabled>
-        <input type="password" id="profil-heslo" placeholder="Nové heslo (volitelné)">
-        <div class="pet-list" id="pet-list"></div>
+    <div class="formular" id="pridani-mazlicka-form">
+        <h3>Přidat mazlíčka <span class="zavrit" onclick="zavritPridaniMazlicka()">×</span></h3>
         <input type="text" id="novy-mazlicek" placeholder="Jméno nového mazlíčka">
-        <button onclick="pridatMazlicka()">Přidat mazlíčka</button>
-        <div class="notes-list" id="profil-notes"></div>
-        <textarea id="nova-poznamka" placeholder="Nová poznámka"></textarea>
-        <button onclick="pridatPoznamku()">Přidat poznámku</button>
-        <div class="reservations-list" id="profil-reservations"></div>
+        <button onclick="pridatMazlicka()">Přidat</button>
     </div>
 
     <div class="formular" id="edit-user-form">
@@ -312,11 +307,18 @@
             const users = await fetchUsers(search);
             const userList = document.getElementById('user-list');
             userList.innerHTML = '';
+            const zakaznikSelect = document.getElementById('zakaznik-select');
+            zakaznikSelect.innerHTML = '<option value="">Vyberte zákazníka</option><option value="novy">Nový zákazník</option>';
             users.forEach(user => {
                 const div = document.createElement('div');
                 div.classList.add('user-item');
                 div.innerHTML = `${user.username} (${user.email}) <button onclick="upravitUzivatele(${user.id})">Upravit</button>`;
                 userList.appendChild(div);
+
+                const option = document.createElement('option');
+                option.value = user.id;
+                option.textContent = `${user.username} (${user.email})`;
+                zakaznikSelect.appendChild(option);
             });
         }
 
@@ -371,7 +373,7 @@
                 userId = result.userId;
                 jeAdmin = result.isAdmin;
                 document.getElementById('prihlaseni-form').style.display = 'none';
-                document.getElementById('profil-btn').classList.remove('hidden');
+                document.getElementById('pridat-mazlicka-btn').classList.remove('hidden');
                 document.getElementById('odhlaseni-btn').classList.remove('hidden');
                 if (jeAdmin) {
                     document.getElementById('zakaznici-sekce').classList.add('hidden');
@@ -416,7 +418,7 @@
             userPets = [];
             document.getElementById('zakaznici-sekce').classList.remove('hidden');
             document.getElementById('admin-sekce').classList.add('hidden');
-            document.getElementById('profil-btn').classList.add('hidden');
+            document.getElementById('pridat-mazlicka-btn').classList.add('hidden');
             document.getElementById('odhlaseni-btn').classList.add('hidden');
             aktualizovatZakaznici();
         }
@@ -425,9 +427,14 @@
             if (!jePrihlasen) return alert("Musíte být přihlášeni!");
             const userData = await fetchUserData();
             document.getElementById('rezervace-form').style.display = 'block';
-            document.getElementById('zakaznik').value = userData.username;
-            document.getElementById('telefon').value = userData.telefon;
-            document.getElementById('email').value = userData.email;
+            if (!jeAdmin) {
+                document.getElementById('zakaznik-select').classList.add('hidden');
+                document.getElementById('zakaznik').value = userData.username;
+                document.getElementById('telefon').value = userData.telefon;
+                document.getElementById('email').value = userData.email;
+            } else {
+                document.getElementById('zakaznik-select').classList.remove('hidden');
+            }
             const zvireSelect = document.getElementById('zvire');
             zvireSelect.innerHTML = '<option value="">Bez zvířete</option>';
             userPets.forEach(pet => {
@@ -440,17 +447,49 @@
             if (!jeAdmin) zvireSelect.setAttribute('required', '');
         }
 
+        function vyplnitUdajeZakaznika() {
+            const zakaznikSelect = document.getElementById('zakaznik-select').value;
+            const zakaznikInput = document.getElementById('zakaznik');
+            const telefonInput = document.getElementById('telefon');
+            const emailInput = document.getElementById('email');
+            const zvireSelect = document.getElementById('zvire');
+
+            if (zakaznikSelect === 'novy') {
+                zakaznikInput.value = '';
+                telefonInput.value = '';
+                emailInput.value = '';
+                zvireSelect.innerHTML = '<option value="">Bez zvířete</option>';
+            } else if (zakaznikSelect) {
+                fetch(`/users/${zakaznikSelect}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                }).then(response => response.json()).then(user => {
+                    zakaznikInput.value = user.username;
+                    telefonInput.value = user.telefon;
+                    emailInput.value = user.email;
+                    zvireSelect.innerHTML = '<option value="">Bez zvířete</option>';
+                    JSON.parse(user.pets).forEach(pet => {
+                        const option = document.createElement('option');
+                        option.value = pet;
+                        option.textContent = pet;
+                        zvireSelect.appendChild(option);
+                    });
+                });
+            }
+        }
+
         function zavritRezervaci() {
             document.getElementById('rezervace-form').style.display = 'none';
         }
 
         async function ulozitRezervaci() {
+            const zakaznikSelect = document.getElementById('zakaznik-select').value;
             const zakaznik = document.getElementById('zakaznik').value;
             const zvire = document.getElementById('zvire').value || null;
             const duvod = document.getElementById('duvod').value;
             const telefon = document.getElementById('telefon').value;
             const email = document.getElementById('email').value;
             const note = document.getElementById('poznamka').value;
+
             if (zakaznik && duvod && (jeAdmin || zvire)) {
                 const reservation = {
                     date: vybranyTermin.date,
@@ -460,7 +499,8 @@
                     duvod,
                     telefon,
                     email,
-                    note
+                    note,
+                    userId: jeAdmin && zakaznikSelect !== 'novy' ? zakaznikSelect : null
                 };
                 const response = await fetch('/reservations', {
                     method: 'POST',
@@ -470,13 +510,14 @@
                     },
                     body: JSON.stringify(reservation)
                 });
+                const result = await response.json();
                 if (response.ok) {
                     document.getElementById('rezervace-form').style.display = 'none';
                     if (!jeAdmin) alert("Rezervace uložena. Vyčkejte na schválení.");
                     if (jeAdmin) aktualizovatAdmin();
                     else aktualizovatZakaznici();
                 } else {
-                    alert("Nepodařilo se uložit rezervaci.");
+                    alert(result.error || "Nepodařilo se uložit rezervaci.");
                 }
             } else {
                 alert("Vyplňte povinné údaje!");
@@ -586,42 +627,12 @@
             }
         }
 
-        async function zobrazitProfil() {
-            const userData = await fetchUserData();
-            document.getElementById('profil-form').style.display = 'block';
-            document.getElementById('profil-jmeno').value = userData.username;
-            document.getElementById('profil-email').value = userData.email;
-            document.getElementById('profil-telefon').value = userData.telefon;
-            document.getElementById('profil-heslo').value = '';
-            const petList = document.getElementById('pet-list');
-            petList.innerHTML = '';
-            userPets.forEach(pet => {
-                const div = document.createElement('div');
-                div.classList.add('pet-item');
-                div.textContent = pet;
-                petList.appendChild(div);
-            });
-            const notesList = document.getElementById('profil-notes');
-            notesList.innerHTML = '';
-            userData.notes.forEach(note => {
-                const div = document.createElement('div');
-                div.classList.add('note-item');
-                div.textContent = `${note.author}: ${note.text}`;
-                notesList.appendChild(div);
-            });
-            const reservationsList = document.getElementById('profil-reservations');
-            reservationsList.innerHTML = '';
-            const reservations = await fetchUserReservations(userId);
-            reservations.forEach(res => {
-                const div = document.createElement('div');
-                div.classList.add('reservation-item');
-                div.textContent = `${res.date} ${res.time}${res.timeEnd ? ` - ${res.timeEnd}` : ''}: ${res.zvire || 'Bez zvířete'} - ${res.duvod}${res.approved ? '' : ' (Čeká na schválení)'}`;
-                reservationsList.appendChild(div);
-            });
+        function zobrazitPridaniMazlicka() {
+            document.getElementById('pridani-mazlicka-form').style.display = 'block';
         }
 
-        function zavritProfil() {
-            document.getElementById('profil-form').style.display = 'none';
+        function zavritPridaniMazlicka() {
+            document.getElementById('pridani-mazlicka-form').style.display = 'none';
         }
 
         async function pridatMazlicka() {
@@ -638,29 +649,9 @@
                 if (response.ok) {
                     userPets.push(novyMazlicek);
                     document.getElementById('novy-mazlicek').value = '';
-                    zobrazitProfil();
+                    zavritPridaniMazlicka();
                 } else {
                     alert("Nepodařilo se přidat mazlíčka.");
-                }
-            }
-        }
-
-        async function pridatPoznamku() {
-            const novaPoznamka = document.getElementById('nova-poznamka').value;
-            if (novaPoznamka) {
-                const response = await fetch('/profile/notes', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({ note: novaPoznamka })
-                });
-                if (response.ok) {
-                    document.getElementById('nova-poznamka').value = '';
-                    zobrazitProfil();
-                } else {
-                    alert("Nepodařilo se přidat poznámku.");
                 }
             }
         }
