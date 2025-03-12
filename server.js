@@ -23,7 +23,7 @@ db.run(`CREATE TABLE IF NOT EXISTS reservations (
     time TEXT NOT NULL,
     timeEnd TEXT,
     zakaznik TEXT NOT NULL,
-    zvire TEXT NOT NULL,
+    zvire TEXT,
     duvod TEXT NOT NULL,
     telefon TEXT,
     email TEXT,
@@ -185,6 +185,15 @@ app.post('/users/:id/notes', authenticateToken, (req, res) => {
     });
 });
 
+app.get('/users/:id/reservations', authenticateToken, (req, res) => {
+    const userId = req.params.id;
+    if (!req.user.isAdmin && req.user.id != userId) return res.status(403).json({ error: 'Nemáte oprávnění.' });
+    db.all('SELECT * FROM reservations WHERE userId = ? ORDER BY date, time', [userId], (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows);
+    });
+});
+
 // Rezervace
 app.get('/reservations/:date', (req, res) => {
     const date = req.params.date;
@@ -198,7 +207,7 @@ app.post('/reservations', authenticateToken, (req, res) => {
     const { date, time, timeEnd, zakaznik, zvire, duvod, telefon, email, note } = req.body;
     const approved = req.user.isAdmin ? 1 : 0;
     db.run('INSERT INTO reservations (date, time, timeEnd, zakaznik, zvire, duvod, telefon, email, userId, approved, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [date, time, timeEnd || null, zakaznik, zvire, duvod, telefon || null, email || null, req.user.id, approved, note || null],
+        [date, time, timeEnd || null, zakaznik, zvire || null, duvod, telefon || null, email || null, req.user.id, approved, note || null],
         function(err) {
             if (err) return res.status(500).json({ error: err.message });
             res.json({ id: this.lastID });
@@ -214,7 +223,7 @@ app.put('/reservations/:id', authenticateToken, (req, res) => {
             return res.status(403).json({ error: 'Nemáte oprávnění upravit tuto rezervaci.' });
         }
         db.run('UPDATE reservations SET time = ?, timeEnd = ?, zakaznik = ?, zvire = ?, duvod = ?, telefon = ?, email = ?, note = ? WHERE id = ?',
-            [time, timeEnd || null, zakaznik, zvire, duvod, telefon || null, email || null, note || null, id],
+            [time, timeEnd || null, zakaznik, zvire || null, duvod, telefon || null, email || null, note || null, id],
             function(err) {
                 if (err) return res.status(500).json({ error: err.message });
                 res.json({ updated: this.changes });
