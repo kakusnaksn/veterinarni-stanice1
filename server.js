@@ -28,7 +28,8 @@ db.run(`CREATE TABLE IF NOT EXISTS reservations (
     telefon TEXT,
     email TEXT,
     userId INTEGER NOT NULL,
-    approved INTEGER DEFAULT 0
+    approved INTEGER DEFAULT 0,
+    note TEXT
 )`);
 
 db.run(`CREATE TABLE IF NOT EXISTS users (
@@ -37,7 +38,9 @@ db.run(`CREATE TABLE IF NOT EXISTS users (
     email TEXT NOT NULL UNIQUE,
     telefon TEXT NOT NULL,
     password TEXT NOT NULL,
-    isAdmin INTEGER DEFAULT 0
+    isAdmin INTEGER DEFAULT 0,
+    pets TEXT DEFAULT '[]',
+    notes TEXT DEFAULT '[]'
 )`);
 
 // Přidání admina
@@ -68,7 +71,7 @@ function authenticateToken(req, res, next) {
 app.post('/register', async (req, res) => {
     const { jmeno, email, telefon, heslo } = req.body;
     const hashedPassword = await bcrypt.hash(heslo, 10);
-    db.run('INSERT INTO users (username, email, telefon, password, isAdmin) VALUES (?, ?, ?, ?, 0)', 
+    db.run('INSERT INTO users (username, email, telefon, password) VALUES (?, ?, ?, ?)', 
         [jmeno, email, telefon, hashedPassword], 
         function(err) {
             if (err) {
@@ -94,7 +97,95 @@ app.post('/login', async (req, res) => {
     });
 });
 
-// API endpointy
+// Profil
+app.get('/profile', authenticateToken, (req, res) => {
+    db.get('SELECT username, email, telefon, pets, notes FROM users WHERE id = ?', [req.user.id], (err, user) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({
+            username: user.username,
+            email: user.email,
+            telefon: user.telefon,
+            pets: JSON.parse(user.pets),
+            notes: JSON.parse(user.notes)
+        });
+    });
+});
+
+app.post('/profile/pets', authenticateToken, (req, res) => {
+    const { pet } = req.body;
+    db.get('SELECT pets FROM users WHERE id = ?', [req.user.id], (err, row) => {
+        if (err) return res.status(500).json({ error: err.message });
+        const pets = JSON.parse(row.pets);
+        pets.push(pet);
+        db.run('UPDATE users SET pets = ? WHERE id = ?', [JSON.stringify(pets), req.user.id], (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ success: true });
+        });
+    });
+});
+
+app.post('/profile/notes', authenticateToken, (req, res) => {
+    const { note } = req.body;
+    db.get('SELECT notes FROM users WHERE id = ?', [req.user.id], (err, row) => {
+        if (err) return res.status(500).json({ error: err.message });
+        const notes = JSON.parse(row.notes);
+        notes.push({ author: req.user.username, text: note });
+        db.run('UPDATE users SET notes = ? WHERE id = ?', [JSON.stringify(notes), req.user.id], (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ success: true });
+        });
+    });
+});
+
+// Správa uživatelů (admin)
+app.get('/users', authenticateToken, (req, res) => {
+    if (!req.user.isAdmin) return res.status(403).json({ error: 'Pouze admin.' });
+    const search = req.query.search || '';
+    db.all('SELECT id, username, email FROM users WHERE username LIKE ? OR email LIKE ?', [`%${search}%`, `%${search}%`], (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows);
+    });
+});
+
+app.get('/users/:id', authenticateToken, (req, res) => {
+    if (!req.user.isAdmin) return res.status(403).json({ error: 'Pouze admin.' });
+    db.get('SELECT username, email, telefon, notes FROM users WHERE id = ?', [req.params.id], (err, user) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (!user) return res.status(404).json({ error: 'Uživatel nenalezen.' });
+        res.json({
+            username: user.username,
+            email: user.email,
+            telefon: user.telefon,
+            notes: JSON.parse(user.notes)
+        });
+    });
+});
+
+app.put('/users/:id/password', authenticateToken, async (req, res) => {
+    if (!req.user.isAdmin) return res.status(403).json({ error: 'Pouze admin.' });
+    const { password } = req.body;
+    const hashedPassword = await bcrypt.hash(password, 10);
+    db.run('UPDATE users SET password = ? WHERE id = ?', [hashedPassword, req.params.id], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ success: true });
+    });
+});
+
+app.post('/users/:id/notes', authenticateToken, (req, res) => {
+    if (!req.user.isAdmin) return res.status(403).json({ error: 'Pouze admin.' });
+    const { note } = req.body;
+    db.get('SELECT notes FROM users WHERE id = ?', [req.params.id], (err, row) => {
+        if (err) return res.status(500).json({ error: err.message });
+        const notes = JSON.parse(row.notes);
+        notes.push({ author: req.user.username, text: note });
+        db.run('UPDATE users SET notes = ? WHERE id = ?', [JSON.stringify(notes), req.params.id], (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ success: true });
+        });
+    });
+});
+
+// Rezervace
 app.get('/reservations/:date', (req, res) => {
     const date = req.params.date;
     db.all('SELECT * FROM reservations WHERE date = ?', [date], (err, rows) => {
@@ -104,10 +195,10 @@ app.get('/reservations/:date', (req, res) => {
 });
 
 app.post('/reservations', authenticateToken, (req, res) => {
-    const { date, time, timeEnd, zakaznik, zvire, duvod, telefon, email } = req.body;
-    const approved = req.user.isAdmin ? 1 : 0; // Adminovy rezervace jsou automaticky schválené
-    db.run('INSERT INTO reservations (date, time, timeEnd, zakaznik, zvire, duvod, telefon, email, userId, approved) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [date, time, timeEnd || null, zakaznik, zvire, duvod, telefon || null, email || null, req.user.id, approved],
+    const { date, time, timeEnd, zakaznik, zvire, duvod, telefon, email, note } = req.body;
+    const approved = req.user.isAdmin ? 1 : 0;
+    db.run('INSERT INTO reservations (date, time, timeEnd, zakaznik, zvire, duvod, telefon, email, userId, approved, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [date, time, timeEnd || null, zakaznik, zvire, duvod, telefon || null, email || null, req.user.id, approved, note || null],
         function(err) {
             if (err) return res.status(500).json({ error: err.message });
             res.json({ id: this.lastID });
@@ -115,15 +206,15 @@ app.post('/reservations', authenticateToken, (req, res) => {
 });
 
 app.put('/reservations/:id', authenticateToken, (req, res) => {
-    const { time, timeEnd, zakaznik, zvire, duvod, telefon, email } = req.body;
+    const { time, timeEnd, zakaznik, zvire, duvod, telefon, email, note } = req.body;
     const id = req.params.id;
     db.get('SELECT userId FROM reservations WHERE id = ?', [id], (err, row) => {
         if (err) return res.status(500).json({ error: err.message });
         if (!row || (!req.user.isAdmin && row.userId !== req.user.id)) {
             return res.status(403).json({ error: 'Nemáte oprávnění upravit tuto rezervaci.' });
         }
-        db.run('UPDATE reservations SET time = ?, timeEnd = ?, zakaznik = ?, zvire = ?, duvod = ?, telefon = ?, email = ? WHERE id = ?',
-            [time, timeEnd || null, zakaznik, zvire, duvod, telefon || null, email || null, id],
+        db.run('UPDATE reservations SET time = ?, timeEnd = ?, zakaznik = ?, zvire = ?, duvod = ?, telefon = ?, email = ?, note = ? WHERE id = ?',
+            [time, timeEnd || null, zakaznik, zvire, duvod, telefon || null, email || null, note || null, id],
             function(err) {
                 if (err) return res.status(500).json({ error: err.message });
                 res.json({ updated: this.changes });
@@ -133,8 +224,7 @@ app.put('/reservations/:id', authenticateToken, (req, res) => {
 
 app.put('/reservations/:id/approve', authenticateToken, (req, res) => {
     if (!req.user.isAdmin) return res.status(403).json({ error: 'Pouze admin může schvalovat rezervace.' });
-    const id = req.params.id;
-    db.run('UPDATE reservations SET approved = 1 WHERE id = ?', [id], function(err) {
+    db.run('UPDATE reservations SET approved = 1 WHERE id = ?', [req.params.id], function(err) {
         if (err) return res.status(500).json({ error: err.message });
         res.json({ approved: this.changes });
     });
