@@ -113,24 +113,12 @@ app.get('/profile', authenticateToken, (req, res) => {
 
 app.post('/profile/pets', authenticateToken, (req, res) => {
     const { name, species } = req.body;
+    if (!name || !species) return res.status(400).json({ error: 'Jméno a druh jsou povinné.' });
     db.get('SELECT pets FROM users WHERE id = ?', [req.user.id], (err, row) => {
         if (err) return res.status(500).json({ error: err.message });
         const pets = JSON.parse(row.pets);
         pets.push({ name, species });
         db.run('UPDATE users SET pets = ? WHERE id = ?', [JSON.stringify(pets), req.user.id], (err) => {
-            if (err) return res.status(500).json({ error: err.message });
-            res.json({ success: true });
-        });
-    });
-});
-
-app.post('/profile/notes', authenticateToken, (req, res) => {
-    const { note } = req.body;
-    db.get('SELECT notes FROM users WHERE id = ?', [req.user.id], (err, row) => {
-        if (err) return res.status(500).json({ error: err.message });
-        const notes = JSON.parse(row.notes);
-        notes.push({ author: req.user.username, text: note });
-        db.run('UPDATE users SET notes = ? WHERE id = ?', [JSON.stringify(notes), req.user.id], (err) => {
             if (err) return res.status(500).json({ error: err.message });
             res.json({ success: true });
         });
@@ -157,7 +145,7 @@ app.get('/users/:id', authenticateToken, (req, res) => {
             email: user.email,
             telefon: user.telefon,
             notes: JSON.parse(user.notes),
-            pets: user.pets
+            pets: JSON.parse(user.pets)
         });
     });
 });
@@ -210,18 +198,16 @@ app.post('/reservations', authenticateToken, async (req, res) => {
     let finalUserId = userId || req.user.id;
 
     if (req.user.isAdmin && !userId) {
-        // Vytvoření nového uživatele, pokud neexistuje
         const username = zakaznik || `zakaznik_${Date.now()}`;
         const userEmail = email || `${username}@example.com`;
         const userTelefon = telefon || '000000000';
-        const hashedPassword = await bcrypt.hash('default123', 10); // Výchozí heslo pro nové uživatele
+        const hashedPassword = await bcrypt.hash('default123', 10);
 
         db.run('INSERT OR IGNORE INTO users (username, email, telefon, password) VALUES (?, ?, ?, ?)',
             [username, userEmail, userTelefon, hashedPassword],
             function(err) {
                 if (err) {
                     if (err.code === 'SQLITE_CONSTRAINT') {
-                        // Pokud uživatel už existuje, najdeme jeho ID
                         db.get('SELECT id FROM users WHERE username = ?', [username], (err, row) => {
                             if (err) return res.status(500).json({ error: err.message });
                             finalUserId = row.id;
