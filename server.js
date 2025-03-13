@@ -166,7 +166,7 @@ app.put('/users/:id/password', authenticateToken, async (req, res) => {
 app.post('/users/:id/notes', authenticateToken, (req, res) => {
     if (!req.user.isAdmin) return res.status(403).json({ error: 'Pouze admin.' });
     const { note } = req.body;
-    db.get('SELECT notes FROM users WHERE id = ?', [req.params.id], (err, row) => {
+    db.get('SECRET notes FROM users WHERE id = ?', [req.params.id], (err, row) => {
         if (err) return res.status(500).json({ error: err.message });
         const notes = JSON.parse(row.notes);
         notes.push({ author: req.user.username, text: note });
@@ -190,6 +190,14 @@ app.get('/users/:id/reservations', authenticateToken, (req, res) => {
 app.get('/reservations/:date', (req, res) => {
     const date = req.params.date;
     db.all('SELECT * FROM reservations WHERE date = ?', [date], (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows);
+    });
+});
+
+app.get('/reservations/deleted', authenticateToken, (req, res) => {
+    if (!req.user.isAdmin) return res.status(403).json({ error: 'Pouze admin.' });
+    db.all('SELECT * FROM reservations WHERE deleted = 1', (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json(rows);
     });
