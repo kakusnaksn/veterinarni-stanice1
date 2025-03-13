@@ -25,9 +25,11 @@
         .volny { background-color: #4CAF50; color: white; }
         .obsazeny { background-color: #f44336; color: white; }
         .cekajici { background-color: #ff9800; color: white; }
+        .smazany { background-color: #9e9e9e; color: white; }
         .volny:hover { background-color: #45a049; }
         .obsazeny:hover { background-color: #d32f2f; }
         .cekajici:hover { background-color: #e68a00; }
+        .smazany:hover { background-color: #757575; }
         .podrobnosti { font-size: 0.9em; margin-top: 5px; }
         .mesic-ovladani { text-align: center; margin-bottom: 10px; }
         .mesic-ovladani button { padding: 8px 16px; margin: 0 5px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; }
@@ -116,6 +118,7 @@
         <input type="text" id="telefon" placeholder="Telefon (volitelné)">
         <input type="email" id="email" placeholder="E-mail (volitelné)">
         <textarea id="poznamka" placeholder="Poznámka k rezervaci"></textarea>
+        <textarea id="interni-poznamka" placeholder="Interní poznámka (vidí jen admin)" class="hidden"></textarea>
         <button onclick="ulozitRezervaci()">Uložit</button>
     </div>
 
@@ -142,6 +145,7 @@
             <option value="15:30">15:30</option><option value="16:00">16:00</option>
         </select>
         <textarea id="edit-poznamka" placeholder="Poznámka k rezervaci"></textarea>
+        <textarea id="edit-interni-poznamka" placeholder="Interní poznámka (vidí jen admin)" class="hidden"></textarea>
         <button onclick="ulozitEditaci()">Uložit změny</button>
         <button class="smazat-btn" onclick="smazatRezervaci()">Smazat rezervaci</button>
         <button class="schvalit-btn hidden" id="schvalit-btn" onclick="schvalitRezervaci()">Schválit rezervaci</button>
@@ -158,7 +162,7 @@
             <option value="Morče">Morče</option>
             <option value="Jiné">Jiné</option>
         </select>
-        <input type="text" id="jine-zvire" placeholder="Zadejte druh" class="hidden">
+        <div id="jine-zvire-container"></div>
         <button onclick="pridatMazlicka()">Přidat</button>
     </div>
 
@@ -252,7 +256,7 @@
                 const div = document.createElement('div');
                 div.classList.add('den');
                 div.textContent = i;
-                const maVolne = casy.some(cas => !reservations.some(r => r.time === cas && r.approved));
+                const maVolne = casy.some(cas => !reservations.some(r => r.time === cas && r.approved && !r.deleted));
                 div.classList.add(maVolne ? 'volny' : 'obsazeny');
                 div.addEventListener('click', () => {
                     vybranyDen = den;
@@ -277,6 +281,8 @@
 
                 if (!reservation) {
                     div.classList.add('volny');
+                } else if (reservation.deleted) {
+                    div.classList.add('smazany');
                 } else if (!reservation.approved) {
                     div.classList.add('cekajici');
                 } else {
@@ -290,7 +296,9 @@
                     if (reservation.telefon) text += `\nTel: ${reservation.telefon}`;
                     if (reservation.email) text += `\nEmail: ${reservation.email}`;
                     if (reservation.note) text += `\nPoznámka: ${reservation.note}`;
+                    if (jeAdmin && reservation.internalNote) text += `\nInterní poznámka: ${reservation.internalNote}`;
                     if (!reservation.approved) text += `\n(Čeká na schválení)`;
+                    if (reservation.deleted) text += `\n(Smazáno zákazníkem)`;
                     podrobnosti.textContent = text;
                     div.appendChild(podrobnosti);
                 }
@@ -438,11 +446,13 @@
             document.getElementById('rezervace-form').style.display = 'block';
             const zakaznikInput = document.getElementById('zakaznik');
             const zakaznikSelect = document.getElementById('zakaznik-select');
+            const interniPoznamka = document.getElementById('interni-poznamka');
 
             if (jeAdmin) {
                 zakaznikSelect.classList.remove('hidden');
                 zakaznikInput.disabled = false;
                 zakaznikInput.value = '';
+                interniPoznamka.classList.remove('hidden');
                 document.getElementById('zvire').removeAttribute('required');
             } else {
                 zakaznikSelect.classList.add('hidden');
@@ -450,6 +460,7 @@
                 zakaznikInput.disabled = true;
                 document.getElementById('telefon').value = userData.telefon;
                 document.getElementById('email').value = userData.email;
+                interniPoznamka.classList.add('hidden');
                 document.getElementById('zvire').setAttribute('required', '');
             }
 
@@ -506,6 +517,7 @@
             const telefon = document.getElementById('telefon').value;
             const email = document.getElementById('email').value;
             const note = document.getElementById('poznamka').value;
+            const internalNote = jeAdmin ? document.getElementById('interni-poznamka').value : null;
 
             if (zakaznik && duvod && (jeAdmin || zvire)) {
                 const reservation = {
@@ -517,6 +529,7 @@
                     telefon,
                     email,
                     note,
+                    internalNote,
                     userId: jeAdmin && zakaznikSelect !== 'novy' ? zakaznikSelect : userId
                 };
                 const response = await fetch('/reservations', {
@@ -563,7 +576,10 @@
             document.getElementById('edit-cas-zacatek').value = vybranyTermin.time;
             document.getElementById('edit-cas-konec').value = vybranyTermin.timeEnd || '';
             document.getElementById('edit-poznamka').value = vybranyTermin.note || '';
-            document.getElementById('schvalit-btn').classList.toggle('hidden', vybranyTermin.approved || !jeAdmin);
+            const interniPoznamka = document.getElementById('edit-interni-poznamka');
+            interniPoznamka.classList.toggle('hidden', !jeAdmin);
+            if (jeAdmin) interniPoznamka.value = vybranyTermin.internalNote || '';
+            document.getElementById('schvalit-btn').classList.toggle('hidden', vybranyTermin.approved || !jeAdmin || vybranyTermin.deleted);
         }
 
         function zavritEditaci() {
@@ -579,6 +595,7 @@
             const time = document.getElementById('edit-cas-zacatek').value;
             const timeEnd = document.getElementById('edit-cas-konec').value;
             const note = document.getElementById('edit-poznamka').value;
+            const internalNote = jeAdmin ? document.getElementById('edit-interni-poznamka').value : vybranyTermin.internalNote;
 
             if (zakaznik && duvod && (jeAdmin || zvire)) {
                 const reservation = {
@@ -589,7 +606,8 @@
                     duvod,
                     telefon,
                     email,
-                    note
+                    note,
+                    internalNote
                 };
                 const response = await fetch(`/reservations/${vybranyTermin.id}`, {
                     method: 'PUT',
@@ -646,7 +664,7 @@
         function zobrazitPridaniMazlicka() {
             if (jeAdmin) return; // Admin nemá tuto možnost
             document.getElementById('pridani-mazlicka-form').style.display = 'block';
-            document.getElementById('jine-zvire').classList.add('hidden');
+            document.getElementById('jine-zvire-container').innerHTML = '';
         }
 
         function zavritPridaniMazlicka() {
@@ -655,16 +673,19 @@
 
         function zobrazitJine() {
             const druh = document.getElementById('druh-zvirete').value;
-            const jineZvire = document.getElementById('jine-zvire');
-            jineZvire.classList.toggle('hidden', druh !== 'Jiné');
-            jineZvire.required = druh === 'Jiné';
+            const container = document.getElementById('jine-zvire-container');
+            if (druh === 'Jiné') {
+                container.innerHTML = '<input type="text" id="jine-zvire" placeholder="Zadejte druh" required>';
+            } else {
+                container.innerHTML = '';
+            }
         }
 
         async function pridatMazlicka() {
             if (jeAdmin) return; // Admin nemá tuto možnost
             const jmeno = document.getElementById('novy-mazlicek').value;
             let druh = document.getElementById('druh-zvirete').value;
-            const jineZvire = document.getElementById('jine-zvire').value;
+            const jineZvire = document.getElementById('jine-zvire') ? document.getElementById('jine-zvire').value : null;
 
             if (jmeno && druh) {
                 if (druh === 'Jiné' && !jineZvire) {
@@ -684,8 +705,7 @@
                     userPets.push(pet);
                     document.getElementById('novy-mazlicek').value = '';
                     document.getElementById('druh-zvirete').value = '';
-                    document.getElementById('jine-zvire').value = '';
-                    document.getElementById('jine-zvire').classList.add('hidden');
+                    document.getElementById('jine-zvire-container').innerHTML = '';
                     zavritPridaniMazlicka();
                 } else {
                     alert("Nepodařilo se přidat mazlíčka.");
@@ -721,7 +741,10 @@
             reservations.forEach(res => {
                 const div = document.createElement('div');
                 div.classList.add('reservation-item');
-                div.textContent = `${res.date} ${res.time}${res.timeEnd ? ` - ${res.timeEnd}` : ''}: ${res.zvire || 'Bez zvířete'} - ${res.duvod}${res.approved ? '' : ' (Čeká na schválení)'}`;
+                let text = `${res.date} ${res.time}${res.timeEnd ? ` - ${res.timeEnd}` : ''}: ${res.zvire || 'Bez zvířete'} - ${res.duvod}`;
+                if (!res.approved) text += ' (Čeká na schválení)';
+                if (res.deleted) text += ' (Smazáno zákazníkem)';
+                div.textContent = text;
                 reservationsList.appendChild(div);
             });
         }
