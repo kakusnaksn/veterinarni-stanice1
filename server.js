@@ -29,7 +29,9 @@ db.run(`CREATE TABLE IF NOT EXISTS reservations (
     email TEXT,
     userId INTEGER NOT NULL,
     approved INTEGER DEFAULT 0,
-    note TEXT
+    deleted INTEGER DEFAULT 0,
+    note TEXT,
+    internalNote TEXT
 )`);
 
 db.run(`CREATE TABLE IF NOT EXISTS users (
@@ -194,7 +196,7 @@ app.get('/reservations/:date', (req, res) => {
 });
 
 app.post('/reservations', authenticateToken, async (req, res) => {
-    const { date, time, timeEnd, zakaznik, zvire, duvod, telefon, email, note, userId } = req.body;
+    const { date, time, timeEnd, zakaznik, zvire, duvod, telefon, email, note, internalNote, userId } = req.body;
     const approved = req.user.isAdmin ? 1 : 0;
     let finalUserId = userId || req.user.id;
 
@@ -227,8 +229,8 @@ app.post('/reservations', authenticateToken, async (req, res) => {
     }
 
     function vlozitRezervaci(userId) {
-        db.run('INSERT INTO reservations (date, time, timeEnd, zakaznik, zvire, duvod, telefon, email, userId, approved, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [date, time, timeEnd || null, zakaznik, zvire || null, duvod, telefon || null, email || null, userId, approved, note || null],
+        db.run('INSERT INTO reservations (date, time, timeEnd, zakaznik, zvire, duvod, telefon, email, userId, approved, note, internalNote) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [date, time, timeEnd || null, zakaznik, zvire || null, duvod, telefon || null, email || null, userId, approved, note || null, internalNote || null],
             function(err) {
                 if (err) return res.status(500).json({ error: err.message });
                 res.json({ id: this.lastID });
@@ -237,15 +239,15 @@ app.post('/reservations', authenticateToken, async (req, res) => {
 });
 
 app.put('/reservations/:id', authenticateToken, (req, res) => {
-    const { time, timeEnd, zakaznik, zvire, duvod, telefon, email, note } = req.body;
+    const { time, timeEnd, zakaznik, zvire, duvod, telefon, email, note, internalNote } = req.body;
     const id = req.params.id;
     db.get('SELECT userId FROM reservations WHERE id = ?', [id], (err, row) => {
         if (err) return res.status(500).json({ error: err.message });
         if (!row || (!req.user.isAdmin && row.userId !== req.user.id)) {
             return res.status(403).json({ error: 'Nemáte oprávnění upravit tuto rezervaci.' });
         }
-        db.run('UPDATE reservations SET time = ?, timeEnd = ?, zakaznik = ?, zvire = ?, duvod = ?, telefon = ?, email = ?, note = ? WHERE id = ?',
-            [time, timeEnd || null, zakaznik, zvire || null, duvod, telefon || null, email || null, note || null, id],
+        db.run('UPDATE reservations SET time = ?, timeEnd = ?, zakaznik = ?, zvire = ?, duvod = ?, telefon = ?, email = ?, note = ?, internalNote = ? WHERE id = ?',
+            [time, timeEnd || null, zakaznik, zvire || null, duvod, telefon || null, email || null, note || null, internalNote || null, id],
             function(err) {
                 if (err) return res.status(500).json({ error: err.message });
                 res.json({ updated: this.changes });
@@ -263,15 +265,27 @@ app.put('/reservations/:id/approve', authenticateToken, (req, res) => {
 
 app.delete('/reservations/:id', authenticateToken, (req, res) => {
     const id = req.params.id;
-    db.get('SELECT userId FROM reservations WHERE id = ?', [id], (err, row) => {
+    db.get('SELECT userId, deleted FROM reservations WHERE id = ?', [id], (err, row) => {
         if (err) return res.status(500).json({ error: err.message });
         if (!row || (!req.user.isAdmin && row.userId !== req.user.id)) {
             return res.status(403).json({ error: 'Nemáte oprávnění smazat tuto rezervaci.' });
         }
-        db.run('DELETE FROM reservations WHERE id = ?', [id], function(err) {
-            if (err) return res.status(500).json({ error: err.message });
-            res.json({ deleted: this.changes });
-        });
+        if (row.deleted && !req.user.isAdmin) {
+            return res.status(403).json({ error: 'Rezervace již byla smazána.' });
+        }
+        if (req.user.isAdmin) {
+            // Admin maže úplně
+            db.run('DELETE FROM reservations WHERE id = ?', [id], function(err) {
+                if (err) return res.status(500).json({ error: err.message });
+                res.json({ deleted: this.changes });
+            });
+        } else {
+            // Zákazník označí jako smazané
+            db.run('UPDATE reservations SET deleted = 1 WHERE id = ?', [id], function(err) {
+                if (err) return res.status(500).json({ error: err.message });
+                res.json({ markedDeleted: this.changes });
+            });
+        }
     });
 });
 
