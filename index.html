@@ -111,7 +111,7 @@
             <option value="novy">Nový zákazník</option>
         </select>
         <input type="text" id="zakaznik" placeholder="Jméno zákazníka" required>
-        <select id="zvire" class="zvire-select" required></select>
+        <select id="zvire" class="zvire-select"></select>
         <input type="text" id="duvod" placeholder="Důvod návštěvy" required>
         <input type="text" id="telefon" placeholder="Telefon (volitelné)">
         <input type="email" id="email" placeholder="E-mail (volitelné)">
@@ -122,7 +122,7 @@
     <div class="formular" id="editace-form">
         <h3>Upravit rezervaci <span class="zavrit" onclick="zavritEditaci()">×</span></h3>
         <input type="text" id="edit-zakaznik" placeholder="Jméno zákazníka" required>
-        <select id="edit-zvire" class="zvire-select" required></select>
+        <select id="edit-zvire" class="zvire-select"></select>
         <input type="text" id="edit-duvod" placeholder="Důvod návštěvy" required>
         <input type="text" id="edit-telefon" placeholder="Telefon (volitelné)">
         <input type="email" id="edit-email" placeholder="E-mail (volitelné)">
@@ -382,8 +382,8 @@
                 userId = result.userId;
                 jeAdmin = result.isAdmin;
                 document.getElementById('prihlaseni-form').style.display = 'none';
-                document.getElementById('pridat-mazlicka-btn').classList.remove('hidden');
                 document.getElementById('odhlaseni-btn').classList.remove('hidden');
+                if (!jeAdmin) document.getElementById('pridat-mazlicka-btn').classList.remove('hidden');
                 if (jeAdmin) {
                     document.getElementById('zakaznici-sekce').classList.add('hidden');
                     document.getElementById('admin-sekce').classList.remove('hidden');
@@ -443,12 +443,14 @@
                 zakaznikSelect.classList.remove('hidden');
                 zakaznikInput.disabled = false;
                 zakaznikInput.value = '';
+                document.getElementById('zvire').removeAttribute('required');
             } else {
                 zakaznikSelect.classList.add('hidden');
                 zakaznikInput.value = userData.username;
                 zakaznikInput.disabled = true;
                 document.getElementById('telefon').value = userData.telefon;
                 document.getElementById('email').value = userData.email;
+                document.getElementById('zvire').setAttribute('required', '');
             }
 
             const zvireSelect = document.getElementById('zvire');
@@ -483,7 +485,7 @@
                 telefonInput.value = user.telefon;
                 emailInput.value = user.email;
                 zvireSelect.innerHTML = '<option value="">Bez zvířete</option>';
-                JSON.parse(user.pets).forEach(pet => {
+                user.pets.forEach(pet => {
                     const option = document.createElement('option');
                     option.value = pet.name;
                     option.textContent = `${pet.name} (${pet.species})`;
@@ -554,6 +556,7 @@
                 option.selected = pet.name === vybranyTermin.zvire;
                 zvireSelect.appendChild(option);
             });
+            if (!jeAdmin) zvireSelect.setAttribute('required', '');
             document.getElementById('edit-duvod').value = vybranyTermin.duvod;
             document.getElementById('edit-telefon').value = vybranyTermin.telefon || '';
             document.getElementById('edit-email').value = vybranyTermin.email || '';
@@ -641,6 +644,7 @@
         }
 
         function zobrazitPridaniMazlicka() {
+            if (jeAdmin) return; // Admin nemá tuto možnost
             document.getElementById('pridani-mazlicka-form').style.display = 'block';
             document.getElementById('jine-zvire').classList.add('hidden');
         }
@@ -657,6 +661,7 @@
         }
 
         async function pridatMazlicka() {
+            if (jeAdmin) return; // Admin nemá tuto možnost
             const jmeno = document.getElementById('novy-mazlicek').value;
             let druh = document.getElementById('druh-zvirete').value;
             const jineZvire = document.getElementById('jine-zvire').value;
