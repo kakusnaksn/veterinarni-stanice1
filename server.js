@@ -112,6 +112,7 @@ app.get('/profile', authenticateToken, (req, res) => {
 });
 
 app.post('/profile/pets', authenticateToken, (req, res) => {
+    if (req.user.isAdmin) return res.status(403).json({ error: 'Admin nemůže přidávat mazlíčky.' });
     const { name, species } = req.body;
     if (!name || !species) return res.status(400).json({ error: 'Jméno a druh jsou povinné.' });
     db.get('SELECT pets FROM users WHERE id = ?', [req.user.id], (err, row) => {
