@@ -330,7 +330,7 @@
 
             div.addEventListener('click', async () => {
                 if (!jePrihlasen) return alert("Musíte být přihlášeni k rezervaci nebo úpravě!");
-                if (editMode && reservation) {
+                if ((editMode || (jePrihlasen && reservation && reservation.userId === userId)) && reservation) {
                     vybranyTermin = reservation;
                     zobrazitEditaci();
                 } else if (!reservation && (editMode || jePrihlasen)) {
@@ -702,7 +702,8 @@
                 if (jeAdmin) aktualizovatAdmin();
                 else aktualizovatZakaznici();
             } else {
-                alert('Nepodařilo se smazat rezervaci.');
+                const error = await response.json();
+                alert(error.error || 'Nepodařilo se smazat rezervaci.');
             }
         }
     }
