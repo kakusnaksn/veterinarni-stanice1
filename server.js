@@ -36,7 +36,7 @@ db.run(`CREATE TABLE IF NOT EXISTS reservations (
 
 db.run(`CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT NOT NULL UNIQUE,
+    username TEXT NOT NULL,
     email TEXT NOT NULL UNIQUE,
     telefon TEXT NOT NULL,
     password TEXT NOT NULL,
@@ -77,8 +77,8 @@ app.post('/register', async (req, res) => {
         [jmeno, email, telefon, hashedPassword], 
         function(err) {
             if (err) {
-                if (err.code === 'SQLITE_CONSTRAINT') {
-                    return res.status(400).json({ success: false, message: 'Uživatelské jméno nebo e-mail už existuje.' });
+                if (err.code === 'SQLITE_CONSTRAINT' && err.message.includes('email')) {
+                    return res.status(400).json({ success: false, message: 'E-mail už existuje.' });
                 }
                 return res.status(500).json({ success: false, message: 'Chyba při registraci.' });
             }
@@ -166,7 +166,7 @@ app.put('/users/:id/password', authenticateToken, async (req, res) => {
 app.post('/users/:id/notes', authenticateToken, (req, res) => {
     if (!req.user.isAdmin) return res.status(403).json({ error: 'Pouze admin.' });
     const { note } = req.body;
-    db.get('SECRET notes FROM users WHERE id = ?', [req.params.id], (err, row) => {
+    db.get('SELECT notes FROM users WHERE id = ?', [req.params.id], (err, row) => {
         if (err) return res.status(500).json({ error: err.message });
         const notes = JSON.parse(row.notes);
         notes.push({ author: req.user.username, text: note });
@@ -218,8 +218,8 @@ app.post('/reservations', authenticateToken, async (req, res) => {
             [username, userEmail, userTelefon, hashedPassword],
             function(err) {
                 if (err) {
-                    if (err.code === 'SQLITE_CONSTRAINT') {
-                        db.get('SELECT id FROM users WHERE username = ?', [username], (err, row) => {
+                    if (err.code === 'SQLITE_CONSTRAINT' && err.message.includes('email')) {
+                        db.get('SELECT id FROM users WHERE email = ?', [userEmail], (err, row) => {
                             if (err) return res.status(500).json({ error: err.message });
                             finalUserId = row.id;
                             vlozitRezervaci(finalUserId);
@@ -288,7 +288,7 @@ app.delete('/reservations/:id', authenticateToken, (req, res) => {
                 res.json({ deleted: this.changes });
             });
         } else {
-            // Zákazník označí jako smazané
+            // Zákazník označí jako smazané (funguje i pro schválené rezervace)
             db.run('UPDATE reservations SET deleted = 1 WHERE id = ?', [id], function(err) {
                 if (err) return res.status(500).json({ error: err.message });
                 res.json({ markedDeleted: this.changes });
