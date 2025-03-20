@@ -379,19 +379,19 @@
         <button onclick="pridatMazlicka()">Přidat</button>
     </div>
 
- <div class="formular" id="edit-user-form">
+<div class="formular hidden" id="edit-user-form">
     <h2>Upravit uživatele <span class="zavrit" onclick="zavritEditUser()">×</span></h2>
-    <label>Jméno: <input type="text" id="edit-user-jmeno" placeholder="Jméno" disabled></label><br>
-    <label>E-mail: <input type="email" id="edit-user-email" placeholder="E-mail" disabled></label><br>
-    <label>Telefon: <input type="text" id="edit-user-telefon" placeholder="Telefon" disabled></label><br>
-    <label>Nové heslo: <input type="password" id="edit-user-heslo" placeholder="Nové heslo"></label><br>
-    <button onclick="ulozitHeslo()">Změnit heslo</button><br>
-    <label>Admin: <input type="checkbox" id="edit-user-admin"></label><br>
-    <button onclick="ulozitAdminStav()">Uložit stav admina</button><br>
+    <label>Jméno: <input type="text" id="edit-user-jmeno" placeholder="Jméno" disabled></label>
+    <label>E-mail: <input type="email" id="edit-user-email" placeholder="E-mail" disabled></label>
+    <label>Telefon: <input type="text" id="edit-user-telefon" placeholder="Telefon" disabled></label>
+    <label>Nové heslo: <input type="password" id="edit-user-heslo" placeholder="Nové heslo"></label>
+    <button onclick="ulozitHeslo()">Změnit heslo</button>
+    <label>Admin: <input type="checkbox" id="edit-user-admin"></label>
+    <button onclick="ulozitAdminStav()">Uložit stav admina</button>
     <h3>Poznámky</h3>
     <div class="notes-list" id="edit-user-notes"></div>
-    <textarea id="edit-user-poznamka" placeholder="Nová poznámka"></textarea><br>
-    <button onclick="pridatPoznamkuAdmin()">Přidat poznámku</button><br>
+    <textarea id="edit-user-poznamka" placeholder="Nová poznámka"></textarea>
+    <button onclick="pridatPoznamkuAdmin()">Přidat poznámku</button>
     <h3>Rezervace uživatele</h3>
     <div class="reservations-list" id="edit-user-reservations"></div>
 </div>
