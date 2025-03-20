@@ -9,8 +9,21 @@ const port = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static(__dirname)); // Statické soubory (HTML, CSS, atd.)
 
+// Statické soubory – ale routy mají přednost
+app.use(express.static(__dirname));
+
+// Hlavní stránka – home.html
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'home.html'));
+});
+
+// Rezervační systém – index.html
+app.get('/reservations', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+// Databáze
 const db = new sqlite3.Database('./reservations.db', (err) => {
     if (err) console.error(err.message);
     console.log('Připojeno k databázi.');
@@ -45,7 +58,7 @@ db.run(`CREATE TABLE IF NOT EXISTS users (
     notes TEXT DEFAULT '[]'
 )`);
 
-// Přidání admina
+// Inicializace admina
 const initUsers = async () => {
     const hashedPassword = await bcrypt.hash('12345', 10);
     db.run('INSERT OR IGNORE INTO users (username, email, telefon, password, isAdmin) VALUES (?, ?, ?, ?, ?)', 
@@ -57,6 +70,7 @@ initUsers();
 
 const SECRET_KEY = process.env.JWT_SECRET || 'tajny-klic-pro-jwt';
 
+// Middleware pro autentikaci
 function authenticateToken(req, res, next) {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
@@ -68,15 +82,6 @@ function authenticateToken(req, res, next) {
         next();
     });
 }
-
-// Routy pro stránky
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'home.html')); // Hlavní stránka
-});
-
-app.get('/reservations', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html')); // Rezervační systém
-});
 
 // Registrace
 app.post('/register', async (req, res) => {
@@ -176,7 +181,7 @@ app.put('/users/:id/password', authenticateToken, async (req, res) => {
 app.put('/users/:id/admin', authenticateToken, (req, res) => {
     if (!req.user.isAdmin) return res.status(403).json({ error: 'Pouze admin.' });
     const { isAdmin } = req.body;
-    db.run('UPDATE users SET isAdmin = ? WHERE id = ?', [isAdmin, req.params.id], function(err) {
+    db.run('UPDATE users SET isAdmin = ? WHERE id = ?', [isAdmin ? 1 : 0, req.params.id], function(err) {
         if (err) return res.status(500).json({ error: err.message });
         res.json({ success: true });
     });
@@ -265,13 +270,14 @@ app.post('/reservations', authenticateToken, async (req, res) => {
 app.put('/reservations/:id', authenticateToken, (req, res) => {
     const { time, timeEnd, zakaznik, zvire, duvod, telefon, email, note, internalNote } = req.body;
     const id = req.params.id;
-    db.get('SELECT userId FROM reservations WHERE id = ?', [id], (err, row) => {
+    db.get('SELECT userId, internalNote AS currentInternalNote FROM reservations WHERE id = ?', [id], (err, row) => {
         if (err) return res.status(500).json({ error: err.message });
         if (!row || (!req.user.isAdmin && row.userId !== req.user.id)) {
             return res.status(403).json({ error: 'Nemáte oprávnění upravit tuto rezervaci.' });
         }
+        const finalInternalNote = req.user.isAdmin ? (internalNote || null) : row.currentInternalNote; // Zákazník nemůže měnit internalNote
         db.run('UPDATE reservations SET time = ?, timeEnd = ?, zakaznik = ?, zvire = ?, duvod = ?, telefon = ?, email = ?, note = ?, internalNote = ? WHERE id = ?',
-            [time, timeEnd || null, zakaznik, zvire || null, duvod, telefon || null, email || null, note || null, internalNote || null, id],
+            [time, timeEnd || null, zakaznik, zvire || null, duvod, telefon || null, email || null, note || null, finalInternalNote, id],
             function(err) {
                 if (err) return res.status(500).json({ error: err.message });
                 res.json({ updated: this.changes });
