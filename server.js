@@ -69,6 +69,15 @@ function authenticateToken(req, res, next) {
     });
 }
 
+// Routy pro stránky
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'home.html'));
+});
+
+app.get('/reservations', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+
 // Registrace
 app.post('/register', async (req, res) => {
     const { jmeno, email, telefon, heslo } = req.body;
@@ -140,7 +149,7 @@ app.get('/users', authenticateToken, (req, res) => {
 
 app.get('/users/:id', authenticateToken, (req, res) => {
     if (!req.user.isAdmin) return res.status(403).json({ error: 'Pouze admin.' });
-    db.get('SELECT username, email, telefon, notes, pets FROM users WHERE id = ?', [req.params.id], (err, user) => {
+    db.get('SELECT username, email, telefon, notes, pets, isAdmin FROM users WHERE id = ?', [req.params.id], (err, user) => {
         if (err) return res.status(500).json({ error: err.message });
         if (!user) return res.status(404).json({ error: 'Uživatel nenalezen.' });
         res.json({
@@ -148,7 +157,8 @@ app.get('/users/:id', authenticateToken, (req, res) => {
             email: user.email,
             telefon: user.telefon,
             notes: JSON.parse(user.notes),
-            pets: JSON.parse(user.pets)
+            pets: JSON.parse(user.pets),
+            isAdmin: user.isAdmin
         });
     });
 });
@@ -158,6 +168,15 @@ app.put('/users/:id/password', authenticateToken, async (req, res) => {
     const { password } = req.body;
     const hashedPassword = await bcrypt.hash(password, 10);
     db.run('UPDATE users SET password = ? WHERE id = ?', [hashedPassword, req.params.id], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ success: true });
+    });
+});
+
+app.put('/users/:id/admin', authenticateToken, (req, res) => {
+    if (!req.user.isAdmin) return res.status(403).json({ error: 'Pouze admin.' });
+    const { isAdmin } = req.body;
+    db.run('UPDATE users SET isAdmin = ? WHERE id = ?', [isAdmin, req.params.id], function(err) {
         if (err) return res.status(500).json({ error: err.message });
         res.json({ success: true });
     });
@@ -282,23 +301,17 @@ app.delete('/reservations/:id', authenticateToken, (req, res) => {
             return res.status(403).json({ error: 'Rezervace již byla smazána.' });
         }
         if (req.user.isAdmin) {
-            // Admin maže úplně
             db.run('DELETE FROM reservations WHERE id = ?', [id], function(err) {
                 if (err) return res.status(500).json({ error: err.message });
                 res.json({ deleted: this.changes });
             });
         } else {
-            // Zákazník označí jako smazané (funguje i pro schválené rezervace)
             db.run('UPDATE reservations SET deleted = 1 WHERE id = ?', [id], function(err) {
                 if (err) return res.status(500).json({ error: err.message });
                 res.json({ markedDeleted: this.changes });
             });
         }
     });
-});
-
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 app.listen(port, () => {
