@@ -60,7 +60,10 @@ const SECRET_KEY = process.env.JWT_SECRET || 'tajny-klic-pro-jwt';
 function authenticateToken(req, res, next) {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
-    if (!token) return res.status(401).json({ error: 'Přístup odepřen – chybí token' });
+    if (!token) {
+        req.user = null; // Bez tokenu pokračujeme jako nepřihlášený
+        return next();
+    }
 
     jwt.verify(token, SECRET_KEY, (err, user) => {
         if (err) return res.status(403).json({ error: 'Neplatný token' });
@@ -101,6 +104,7 @@ app.post('/login', async (req, res) => {
 
 // Profil
 app.get('/profile', authenticateToken, (req, res) => {
+    if (!req.user) return res.status(401).json({ error: 'Přihlášení je vyžadováno.' });
     db.get('SELECT username, email, telefon, pets, notes FROM users WHERE id = ?', [req.user.id], (err, user) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json({
@@ -114,6 +118,7 @@ app.get('/profile', authenticateToken, (req, res) => {
 });
 
 app.post('/profile/pets', authenticateToken, (req, res) => {
+    if (!req.user) return res.status(401).json({ error: 'Přihlášení je vyžadováno.' });
     if (req.user.isAdmin) return res.status(403).json({ error: 'Admin nemůže přidávat mazlíčky.' });
     const { name, species } = req.body;
     if (!name || !species) return res.status(400).json({ error: 'Jméno a druh jsou povinné.' });
@@ -130,7 +135,7 @@ app.post('/profile/pets', authenticateToken, (req, res) => {
 
 // Správa uživatelů (admin)
 app.get('/users', authenticateToken, (req, res) => {
-    if (!req.user.isAdmin) return res.status(403).json({ error: 'Pouze admin.' });
+    if (!req.user || !req.user.isAdmin) return res.status(403).json({ error: 'Pouze admin.' });
     const search = req.query.search || '';
     db.all('SELECT id, username, email FROM users WHERE username LIKE ? OR email LIKE ?', [`%${search}%`, `%${search}%`], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -139,7 +144,7 @@ app.get('/users', authenticateToken, (req, res) => {
 });
 
 app.get('/users/:id', authenticateToken, (req, res) => {
-    if (!req.user.isAdmin) return res.status(403).json({ error: 'Pouze admin.' });
+    if (!req.user || !req.user.isAdmin) return res.status(403).json({ error: 'Pouze admin.' });
     db.get('SELECT username, email, telefon, notes, pets FROM users WHERE id = ?', [req.params.id], (err, user) => {
         if (err) return res.status(500).json({ error: err.message });
         if (!user) return res.status(404).json({ error: 'Uživatel nenalezen.' });
@@ -154,7 +159,7 @@ app.get('/users/:id', authenticateToken, (req, res) => {
 });
 
 app.put('/users/:id/password', authenticateToken, async (req, res) => {
-    if (!req.user.isAdmin) return res.status(403).json({ error: 'Pouze admin.' });
+    if (!req.user || !req.user.isAdmin) return res.status(403).json({ error: 'Pouze admin.' });
     const { password } = req.body;
     const hashedPassword = await bcrypt.hash(password, 10);
     db.run('UPDATE users SET password = ? WHERE id = ?', [hashedPassword, req.params.id], (err) => {
@@ -164,7 +169,7 @@ app.put('/users/:id/password', authenticateToken, async (req, res) => {
 });
 
 app.post('/users/:id/notes', authenticateToken, (req, res) => {
-    if (!req.user.isAdmin) return res.status(403).json({ error: 'Pouze admin.' });
+    if (!req.user || !req.user.isAdmin) return res.status(403).json({ error: 'Pouze admin.' });
     const { note } = req.body;
     db.get('SELECT notes FROM users WHERE id = ?', [req.params.id], (err, row) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -178,6 +183,7 @@ app.post('/users/:id/notes', authenticateToken, (req, res) => {
 });
 
 app.get('/users/:id/reservations', authenticateToken, (req, res) => {
+    if (!req.user) return res.status(401).json({ error: 'Přihlášení je vyžadováno.' });
     const userId = req.params.id;
     if (!req.user.isAdmin && req.user.id != userId) return res.status(403).json({ error: 'Nemáte oprávnění.' });
     db.all('SELECT * FROM reservations WHERE userId = ? ORDER BY date, time', [userId], (err, rows) => {
@@ -186,22 +192,40 @@ app.get('/users/:id/reservations', authenticateToken, (req, res) => {
     });
 });
 
-// Rezervace
+// Rezervace – veřejné i autentizované zobrazení
 app.get('/reservations/:date', authenticateToken, (req, res) => {
     const date = req.params.date;
     db.all('SELECT * FROM reservations WHERE date = ?', [date], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
-        // Filtrování internalNote pro ne-adminy
         const filteredRows = rows.map(row => {
-            if (!req.user.isAdmin) delete row.internalNote;
-            return row;
+            const publicData = {
+                id: row.id,
+                date: row.date,
+                time: row.time,
+                timeEnd: row.timeEnd,
+                zakaznik: row.zakaznik,
+                zvire: row.zvire,
+                duvod: row.duvod,
+                approved: row.approved,
+                deleted: row.deleted
+            };
+            if (req.user) {
+                publicData.userId = row.userId;
+                publicData.note = row.note;
+                if (req.user.isAdmin) {
+                    publicData.internalNote = row.internalNote;
+                    publicData.telefon = row.telefon;
+                    publicData.email = row.email;
+                }
+            }
+            return publicData;
         });
         res.json(filteredRows);
     });
 });
 
 app.get('/reservations/deleted', authenticateToken, (req, res) => {
-    if (!req.user.isAdmin) return res.status(403).json({ error: 'Pouze admin.' });
+    if (!req.user || !req.user.isAdmin) return res.status(403).json({ error: 'Pouze admin.' });
     db.all('SELECT * FROM reservations WHERE deleted = 1', (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json(rows);
@@ -209,10 +233,11 @@ app.get('/reservations/deleted', authenticateToken, (req, res) => {
 });
 
 app.post('/reservations', authenticateToken, async (req, res) => {
+    if (!req.user) return res.status(401).json({ error: 'Přihlášení je vyžadováno.' });
     const { date, time, timeEnd, zakaznik, zvire, duvod, telefon, email, note, internalNote, userId } = req.body;
     const approved = req.user.isAdmin ? 1 : 0;
     let finalUserId = userId || req.user.id;
-    const finalInternalNote = req.user.isAdmin ? (internalNote || null) : null; // Jen admin může přidat internalNote
+    const finalInternalNote = req.user.isAdmin ? (internalNote || null) : null;
 
     if (req.user.isAdmin && !userId) {
         const username = zakaznik || `zakaznik_${Date.now()}`;
@@ -253,6 +278,7 @@ app.post('/reservations', authenticateToken, async (req, res) => {
 });
 
 app.put('/reservations/:id', authenticateToken, (req, res) => {
+    if (!req.user) return res.status(401).json({ error: 'Přihlášení je vyžadováno.' });
     const { time, timeEnd, zakaznik, zvire, duvod, telefon, email, note, internalNote } = req.body;
     const id = req.params.id;
     db.get('SELECT userId, internalNote AS currentInternalNote FROM reservations WHERE id = ?', [id], (err, row) => {
@@ -260,7 +286,7 @@ app.put('/reservations/:id', authenticateToken, (req, res) => {
         if (!row || (!req.user.isAdmin && row.userId !== req.user.id)) {
             return res.status(403).json({ error: 'Nemáte oprávnění upravit tuto rezervaci.' });
         }
-        const finalInternalNote = req.user.isAdmin ? (internalNote || null) : row.currentInternalNote; // Jen admin může měnit internalNote
+        const finalInternalNote = req.user.isAdmin ? (internalNote || null) : row.currentInternalNote;
         db.run('UPDATE reservations SET time = ?, timeEnd = ?, zakaznik = ?, zvire = ?, duvod = ?, telefon = ?, email = ?, note = ?, internalNote = ? WHERE id = ?',
             [time, timeEnd || null, zakaznik, zvire || null, duvod, telefon || null, email || null, note || null, finalInternalNote, id],
             function(err) {
@@ -271,7 +297,7 @@ app.put('/reservations/:id', authenticateToken, (req, res) => {
 });
 
 app.put('/reservations/:id/approve', authenticateToken, (req, res) => {
-    if (!req.user.isAdmin) return res.status(403).json({ error: 'Pouze admin může schvalovat rezervace.' });
+    if (!req.user || !req.user.isAdmin) return res.status(403).json({ error: 'Pouze admin může schvalovat rezervace.' });
     db.run('UPDATE reservations SET approved = 1 WHERE id = ?', [req.params.id], function(err) {
         if (err) return res.status(500).json({ error: err.message });
         res.json({ approved: this.changes });
@@ -279,6 +305,7 @@ app.put('/reservations/:id/approve', authenticateToken, (req, res) => {
 });
 
 app.delete('/reservations/:id', authenticateToken, (req, res) => {
+    if (!req.user) return res.status(401).json({ error: 'Přihlášení je vyžadováno.' });
     const id = req.params.id;
     db.get('SELECT userId, deleted FROM reservations WHERE id = ?', [id], (err, row) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -289,13 +316,11 @@ app.delete('/reservations/:id', authenticateToken, (req, res) => {
             return res.status(403).json({ error: 'Rezervace již byla smazána.' });
         }
         if (req.user.isAdmin) {
-            // Admin maže úplně
             db.run('DELETE FROM reservations WHERE id = ?', [id], function(err) {
                 if (err) return res.status(500).json({ error: err.message });
                 res.json({ deleted: this.changes });
             });
         } else {
-            // Zákazník označí jako smazané
             db.run('UPDATE reservations SET deleted = 1 WHERE id = ?', [id], function(err) {
                 if (err) return res.status(500).json({ error: err.message });
                 res.json({ markedDeleted: this.changes });
