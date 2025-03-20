@@ -5,217 +5,233 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rezervace - Veterinární ordinace</title>
 <style>
+    /* Základní styly pro stránku */
     body {
-        font-family: Arial, sans-serif;
+        font-family: 'Segoe UI', Arial, sans-serif;
         margin: 0;
         padding: 0;
-        background-color: #f4f4f4;
+        background-color: #f0f2f5; /* Jemně šedá */
+        color: #333; /* Tmavší text pro čitelnost */
+        overflow-y: auto; /* Rolování celé stránky */
+        min-height: 100vh; /* Zajistí, že stránka má výšku obrazovky */
     }
 
     .hidden {
         display: none;
     }
 
-    /* Obecné styly pro formuláře */
+    /* Hlavní kontejnery */
+    #zakaznici-sekce, #admin-sekce {
+        max-width: 900px;
+        margin: 20px auto;
+        padding: 20px;
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+
+    #datum-zakaznici, #datum-admin {
+        font-size: 24px;
+        font-weight: bold;
+        text-align: center;
+        margin-bottom: 20px;
+        color: #2c3e50;
+    }
+
+    /* Formuláře */
     .formular {
         position: fixed;
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
-        max-width: 400px; /* Omezení šířky */
-        width: 90%; /* Responzivní pro menší obrazovky */
-        padding: 15px;
+        width: 100%;
+        max-width: 360px; /* Menší a kompaktní */
+        padding: 20px;
         background: white;
-        border: 1px solid #ccc;
-        border-radius: 5px;
-        box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        overflow-y: auto; /* Scrollování při dlouhém obsahu */
-        max-height: 80vh; /* Maximální výška */
-        font-size: 14px; /* Menší písmo */
+        border-radius: 8px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        overflow-y: auto; /* Vnitřní rolování */
+        max-height: 80vh; /* Omezená výška */
         z-index: 1000;
     }
 
     .formular h2 {
-        font-size: 18px; /* Menší nadpis */
-        margin: 0 0 10px;
+        font-size: 20px;
+        margin: 0 0 15px;
+        color: #2c3e50;
         display: flex;
         justify-content: space-between;
         align-items: center;
     }
 
     .formular h3 {
-        font-size: 16px; /* Menší podnadpisy */
-        margin: 10px 0 5px;
+        font-size: 16px;
+        margin: 15px 0 10px;
+        color: #34495e;
     }
 
     .formular label {
         display: block;
-        margin: 5px 0;
+        margin: 8px 0 4px;
         font-size: 14px;
+        color: #555;
     }
 
     .formular input, .formular textarea, .formular select {
         width: 100%;
-        max-width: 350px; /* Omezení šířky polí */
-        padding: 5px;
-        margin: 2px 0;
+        padding: 8px;
         font-size: 14px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
         box-sizing: border-box;
-        border: 1px solid #ccc;
-        border-radius: 3px;
+        background: #fafafa;
+        transition: border-color 0.2s;
+    }
+
+    .formular input:focus, .formular textarea:focus, .formular select:focus {
+        border-color: #3498db;
+        outline: none;
     }
 
     .formular textarea {
-        height: 80px; /* Omezená výška poznámek */
-        resize: vertical; /* Lze měnit výšku, ne šířku */
+        height: 60px;
+        resize: vertical;
     }
 
     .formular button {
-        padding: 8px 15px;
-        margin: 5px 0;
+        width: 100%;
+        padding: 10px;
+        margin: 10px 0 0;
         font-size: 14px;
-        background-color: #4CAF50;
+        background-color: #3498db; /* Modrá místo zelené */
         color: white;
         border: none;
-        border-radius: 5px;
+        border-radius: 4px;
         cursor: pointer;
+        transition: background-color 0.2s;
     }
 
     .formular button:hover {
-        background-color: #45a049;
+        background-color: #2980b9;
     }
 
     .zavrit {
         cursor: pointer;
-        font-size: 18px;
-        color: red;
-    }
-
-    /* Styly pro #zakaznici-sekce */
-    #zakaznici-sekce {
-        padding: 20px;
-        text-align: center;
-    }
-
-    #datum-zakaznici {
         font-size: 20px;
-        margin-bottom: 10px;
+        color: #e74c3c; /* Červená pro zavření */
+        line-height: 20px;
     }
 
-    #terminy-zakaznici {
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: center;
+    /* Termíny */
+    #terminy-zakaznici, #terminy-admin {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
         gap: 10px;
+        margin-top: 20px;
     }
 
     .termin {
         padding: 10px;
-        border: 1px solid #ccc;
+        border: 1px solid #ddd;
         border-radius: 5px;
-        cursor: pointer;
-        width: 120px;
+        background: white;
         text-align: center;
+        cursor: pointer;
+        transition: background-color 0.2s;
     }
 
     .termin.volny {
-        background-color: #dff0d8;
+        background-color: #e8f5e9;
     }
 
     .termin.obsazeny {
-        background-color: #f2dede;
+        background-color: #ffebee;
     }
 
     .termin.cekajici {
-        background-color: #fcf8e3;
+        background-color: #fffde7;
     }
 
     .termin.smazany {
-        background-color: #d9edf7;
+        background-color: #e3f2fd;
         text-decoration: line-through;
     }
 
     .podrobnosti {
         font-size: 12px;
+        color: #666;
         white-space: pre-wrap;
     }
 
-    /* Styly pro #admin-sekce */
-    #admin-sekce {
-        padding: 20px;
-        text-align: center;
-    }
-
-    #datum-admin {
-        font-size: 20px;
-        margin-bottom: 10px;
-    }
-
+    /* Kalendář */
     #mesic-kalendar-admin {
         display: grid;
-        grid-template-columns: repeat(7, 40px);
+        grid-template-columns: repeat(7, 1fr);
         gap: 5px;
-        margin: 10px auto;
-        max-width: 300px;
+        max-width: 280px;
+        margin: 20px auto;
     }
 
     .den {
-        padding: 5px;
-        border: 1px solid #ccc;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
         text-align: center;
         cursor: pointer;
+        background: white;
     }
 
     .den.volny {
-        background-color: #dff0d8;
+        background-color: #e8f5e9;
     }
 
     .den.obsazeny {
-        background-color: #f2dede;
+        background-color: #ffebee;
     }
 
-    #terminy-admin {
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: center;
-        gap: 10px;
-        margin-top: 10px;
-    }
-
+    /* Uživatelé */
     #search-users {
-        width: 200px;
-        padding: 5px;
-        margin: 10px 0;
+        width: 100%;
+        max-width: 300px;
+        padding: 8px;
+        margin: 10px auto;
+        display: block;
     }
 
     #user-list {
         max-height: 200px;
         overflow-y: auto;
-        border: 1px solid #ccc;
-        padding: 5px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        padding: 10px;
         margin: 10px auto;
         max-width: 400px;
+        background: white;
     }
 
     .user-item {
-        padding: 5px;
-        border-bottom: 1px solid #ddd;
+        padding: 8px;
+        border-bottom: 1px solid #eee;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
     }
 
     .user-item button {
-        float: right;
-        padding: 2px 5px;
+        padding: 4px 8px;
         font-size: 12px;
+        background-color: #3498db;
     }
 
-    /* Styly pro notes-list a reservations-list */
+    /* Poznámky a rezervace */
     .notes-list, .reservations-list {
-        max-height: 150px; /* Omezená výška */
-        overflow-y: auto; /* Scrollování */
-        margin: 5px 0;
-        font-size: 14px;
+        max-height: 120px;
+        overflow-y: auto;
         border: 1px solid #ddd;
+        border-radius: 4px;
         padding: 5px;
+        background: #fafafa;
+        font-size: 13px;
     }
 
     .note-item, .reservation-item {
@@ -223,36 +239,45 @@
         border-bottom: 1px solid #eee;
     }
 
-    /* Styly pro notifikace */
+    /* Notifikace */
     .notification {
         position: fixed;
-        bottom: 10px;
-        right: 10px;
-        background: #fff;
-        border: 1px solid #ccc;
+        bottom: 20px;
+        right: 20px;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 5px;
         padding: 10px;
         max-width: 300px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        font-size: 14px;
         white-space: pre-wrap;
-        box-shadow: 0 0 5px rgba(0,0,0,0.2);
     }
 
     .notification .zavrit {
         float: right;
-        cursor: pointer;
-        color: red;
+        color: #e74c3c;
     }
 
     /* Tlačítka nahoře */
     #odhlaseni-btn, #pridat-mazlicka-btn {
         position: fixed;
         top: 10px;
-        right: 10px;
-        padding: 5px 10px;
+        padding: 8px 15px;
         font-size: 14px;
+        background-color: #3498db;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+
+    #odhlaseni-btn {
+        right: 10px;
     }
 
     #pridat-mazlicka-btn {
-        right: 100px;
+        right: 120px;
     }
 </style>
 </head>
