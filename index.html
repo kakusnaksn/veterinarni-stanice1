@@ -8,213 +8,166 @@
     body {
         font-family: Arial, sans-serif;
         margin: 0;
-        padding: 0;
-        background-color: #f4f4f4;
-        overflow-y: auto; /* Rolování celé stránky */
-    }
-
-    .hidden {
-        display: none;
-    }
-
-    /* Formuláře */
-    .formular {
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        max-width: 350px; /* Menší šířka pro #edit-user-form */
-        padding: 15px;
-        background: white;
-        border: 1px solid #ccc;
-        border-radius: 5px;
-        overflow-y: auto; /* Vnitřní rolování formuláře */
-        max-height: 80vh; /* Omezená výška */
-    }
-
-    .formular h2 {
-        margin-top: 0;
-    }
-
-    .formular input, .formular textarea, .formular select {
-        width: 100%;
-        padding: 5px;
-        margin: 5px 0;
-        box-sizing: border-box;
-    }
-
-    .formular textarea {
-        height: 100px;
-    }
-
-    .formular button {
-        padding: 10px;
-        background-color: #4CAF50; /* Původní zelená */
-        color: white;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-    }
-
-    .formular button:hover {
-        background-color: #45a049;
-    }
-
-    .zavrit {
-        float: right;
-        cursor: pointer;
-        font-size: 20px;
-        color: red;
-    }
-
-    /* Zákaznická sekce */
-    #zakaznici-sekce {
         padding: 20px;
-        text-align: center;
+        background-color: #f0f0f0;
+        overflow-y: auto; /* Přidáno rolování celé stránky */
     }
 
-    #datum-zakaznici {
-        font-size: 20px;
-        margin-bottom: 10px;
-    }
-
-    #terminy-zakaznici {
+    .hlavicka {
         display: flex;
-        flex-wrap: wrap;
-        justify-content: center;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px;
+        background-color: #4CAF50;
+        color: white;
+    }
+
+    .hlavicka h1 {
+        margin: 0;
+    }
+
+    .hlavicka-buttons {
+        display: flex;
         gap: 10px;
     }
 
-    .termin {
-        padding: 10px;
-        border: 1px solid #ccc;
+    .prihlaseni-btn {
+        padding: 10px 20px;
+        width: 160px;
+        background-color: #ffffff;
+        color: #4CAF50;
+        border: none;
         border-radius: 5px;
         cursor: pointer;
-        width: 120px;
+        font-weight: bold;
         text-align: center;
     }
 
-    .termin.volny {
-        background-color: #dff0d8;
+    .prihlaseni-btn:hover {
+        background-color: #e0e0e0;
     }
 
-    .termin.obsazeny {
-        background-color: #f2dede;
-    }
-
-    .termin.cekajici {
-        background-color: #fcf8e3;
-    }
-
-    .termin.smazany {
-        background-color: #d9edf7;
-        text-decoration: line-through;
-    }
-
-    .podrobnosti {
-        font-size: 12px;
-        white-space: pre-wrap;
-    }
-
-    /* Admin sekce */
-    #admin-sekce {
+    .sekce {
+        max-width: 1000px;
+        margin: 20px auto;
         padding: 20px;
+        background-color: white;
+        border-radius: 5px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+
+    .datum {
         text-align: center;
+        font-size: 1.2em;
+        margin-bottom: 20px;
     }
 
-    #datum-admin {
-        font-size: 20px;
-        margin-bottom: 10px;
+    .vyber-datum {
+        text-align: center;
+        margin-bottom: 20px;
     }
 
-    #mesic-kalendar-admin {
+    .vyber-datum input[type="date"] {
+        padding: 10px;
+        font-size: 1em;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        width: 360px;
+        height: 40px;
+    }
+
+    .mesic-kalendar {
         display: grid;
-        grid-template-columns: repeat(7, 40px);
+        grid-template-columns: repeat(7, 1fr);
         gap: 5px;
-        margin: 10px auto;
-        max-width: 300px;
+        text-align: center;
+        margin-bottom: 20px;
     }
 
     .den {
-        padding: 5px;
-        border: 1px solid #ccc;
-        text-align: center;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
         cursor: pointer;
     }
 
     .den.volny {
-        background-color: #dff0d8;
+        background-color: #4CAF50;
+        color: white;
     }
 
     .den.obsazeny {
-        background-color: #f2dede;
+        background-color: #f44336;
+        color: white;
     }
 
-    #terminy-admin {
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: center;
+    .den:hover:not(.obsazeny) {
+        background-color: #45a049;
+    }
+
+    .terminy {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
         gap: 10px;
-        margin-top: 10px;
+        margin-top: 20px;
     }
 
-    #search-users {
-        width: 200px;
-        padding: 5px;
-        margin: 10px 0;
-    }
-
-    #user-list {
-        max-height: 200px;
-        overflow-y: auto;
-        border: 1px solid #ccc;
-        padding: 5px;
-        margin: 10px auto;
-        max-width: 400px;
-    }
-
-    .user-item {
-        padding: 5px;
-        border-bottom: 1px solid #ddd;
-    }
-
-    .user-item button {
-        float: right;
-        padding: 2px 5px;
-        font-size: 12px;
-    }
-
-    /* Poznámky a rezervace */
-    .notes-list, .reservations-list {
-        max-height: 150px;
-        overflow-y: auto;
-        margin: 5px 0;
-    }
-
-    /* Notifikace */
-    .notification {
-        position: fixed;
-        bottom: 10px;
-        right: 10px;
-        background: #fff;
-        border: 1px solid #ccc;
-        padding: 10px;
-        max-width: 300px;
-        white-space: pre-wrap;
-    }
-
-    .notification .zavrit {
-        float: right;
+    .termin {
+        padding: 15px;
+        text-align: center;
+        border-radius: 5px;
         cursor: pointer;
-        color: red;
     }
 
-    /* Tlačítka nahoře */
-    #odhlaseni-btn, #pridat-mazlicka-btn {
-        position: fixed;
-        top: 10px;
-        right: 10px;
-        padding: 5px 10px;
+    .volny {
+        background-color: #4CAF50;
+        color: white;
+    }
+
+    .obsazeny {
+        background-color: #f44336;
+        color: white;
+    }
+
+    .cekajici {
+        background-color: #ff9800;
+        color: white;
+    }
+
+    .smazany {
+        background-color: #9e9e9e;
+        color: white;
+    }
+
+    .volny:hover {
+        background-color: #45a049;
+    }
+
+    .obsazeny:hover {
+        background-color: #d32f2f;
+    }
+
+    .cekajici:hover {
+        background-color: #e68a00;
+    }
+
+    .smazany:hover {
+        background-color: #757575;
+    }
+
+    .podrobnosti {
+        font-size: 0.9em;
+        margin-top: 5px;
+    }
+
+    .mesic-ovladani {
+        text-align: center;
+        margin-bottom: 10px;
+    }
+
+    .mesic-ovladani button {
+        padding: 8px 16px;
+        margin: 0 5px;
         background-color: #4CAF50;
         color: white;
         border: none;
@@ -222,8 +175,163 @@
         cursor: pointer;
     }
 
-    #pridat-mazlicka-btn {
-        right: 100px;
+    .mesic-ovladani button:hover {
+        background-color: #45a049;
+    }
+
+    .formular {
+        display: none;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background-color: white;
+        padding: 20px;
+        border-radius: 5px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.3);
+        width: 100%;
+        max-width: 400px; /* Omezení šířky pro #edit-user-form */
+        max-height: 80vh; /* Omezení výšky */
+        overflow-y: auto; /* Vnitřní rolování formuláře */
+    }
+
+    .formular h3 {
+        margin: 0 0 20px 0;
+        text-align: center;
+    }
+
+    .formular .zavrit {
+        position: absolute;
+        right: 10px;
+        top: 5px;
+        font-size: 20px;
+        cursor: pointer;
+        color: #f44336;
+    }
+
+    .formular input, .formular select, .formular textarea {
+        display: block;
+        width: 100%; /* Plná šířka uvnitř formuláře */
+        max-width: 360px; /* Maximální šířka polí */
+        height: 40px;
+        margin: 10px auto;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        box-sizing: border-box;
+    }
+
+    .formular textarea {
+        height: 80px;
+    }
+
+    .formular button {
+        display: block;
+        width: 100%;
+        max-width: 360px;
+        height: 40px;
+        margin: 10px auto;
+        padding: 10px;
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+
+    .formular .smazat-btn {
+        background-color: #f44336;
+    }
+
+    .formular .schvalit-btn {
+        background-color: #2196F3;
+    }
+
+    .formular button:hover {
+        background-color: #45a049;
+    }
+
+    .formular .smazat-btn:hover {
+        background-color: #d32f2f;
+    }
+
+    .formular .schvalit-btn:hover {
+        background-color: #1976D2;
+    }
+
+    .hidden {
+        display: none;
+    }
+
+    .search-bar {
+        margin: 20px 0;
+        text-align: center;
+    }
+
+    .search-bar input {
+        width: 360px;
+        height: 40px;
+        padding: 10px;
+    }
+
+    .user-list, .notes-list, .reservations-list {
+        margin-top: 20px;
+        max-height: 150px; /* Omezení výšky seznamů */
+        overflow-y: auto; /* Rolování uvnitř seznamů */
+    }
+
+    .user-item, .note-item, .reservation-item {
+        padding: 10px;
+        border-bottom: 1px solid #ddd;
+    }
+
+    .pet-list {
+        margin-top: 10px;
+    }
+
+    .pet-item {
+        padding: 5px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        margin-bottom: 5px;
+    }
+
+    .notification {
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: #ff9800;
+        color: white;
+        padding: 15px;
+        border-radius: 5px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.3);
+        z-index: 1000;
+    }
+
+    .notification .zavrit {
+        cursor: pointer;
+        margin-left: 10px;
+        font-size: 20px;
+    }
+
+    #zakaznik-search-results {
+        position: absolute;
+        background-color: white;
+        border: 1px solid #ddd;
+        width: 360px;
+        max-height: 200px;
+        overflow-y: auto;
+        z-index: 10;
+    }
+
+    #zakaznik-search-results div {
+        padding: 10px;
+        cursor: pointer;
+    }
+
+    #zakaznik-search-results div:hover {
+        background-color: #f0f0f0;
     }
 </style>
 </head>
