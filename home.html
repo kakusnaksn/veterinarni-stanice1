@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Veterinární klinika</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #fff; /* Bílé pozadí */
+        }
+        .header {
+            padding: 20px;
+            text-align: center;
+        }
+        .header h1 {
+            color: #333; /* Tmavě šedý text */
+            margin: 0;
+        }
+        .reserve-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: #4CAF50; /* Zelené tlačítko */
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .reserve-btn:hover {
+            background-color: #45a049; /* Tmavší zelená při najetí */
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Veterinární klinika</h1>
+    </div>
+    <button class="reserve-btn" onclick="window.location.href='/reservations'">Rezervovat</button>
+</body>
+</html>
