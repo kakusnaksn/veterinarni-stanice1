@@ -9,7 +9,7 @@ const port = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static(__dirname));
+app.use(express.static(__dirname)); // Statické soubory (HTML, CSS, atd.)
 
 const db = new sqlite3.Database('./reservations.db', (err) => {
     if (err) console.error(err.message);
@@ -71,11 +71,11 @@ function authenticateToken(req, res, next) {
 
 // Routy pro stránky
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'home.html'));
+    res.sendFile(path.join(__dirname, 'home.html')); // Hlavní stránka
 });
 
 app.get('/reservations', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
+    res.sendFile(path.join(__dirname, 'index.html')); // Rezervační systém
 });
 
 // Registrace
@@ -233,24 +233,21 @@ app.post('/reservations', authenticateToken, async (req, res) => {
         const userTelefon = telefon || '000000000';
         const hashedPassword = await bcrypt.hash('default123', 10);
 
-        db.run('INSERT OR IGNORE INTO users (username, email, telefon, password) VALUES (?, ?, ?, ?)',
-            [username, userEmail, userTelefon, hashedPassword],
-            function(err) {
-                if (err) {
-                    if (err.code === 'SQLITE_CONSTRAINT' && err.message.includes('email')) {
-                        db.get('SELECT id FROM users WHERE email = ?', [userEmail], (err, row) => {
-                            if (err) return res.status(500).json({ error: err.message });
-                            finalUserId = row.id;
-                            vlozitRezervaci(finalUserId);
-                        });
-                    } else {
-                        return res.status(500).json({ error: err.message });
-                    }
-                } else {
-                    finalUserId = this.lastID;
-                    vlozitRezervaci(finalUserId);
-                }
-            });
+        db.get('SELECT id FROM users WHERE email = ?', [userEmail], (err, row) => {
+            if (err) return res.status(500).json({ error: err.message });
+            if (row) {
+                finalUserId = row.id;
+                vlozitRezervaci(finalUserId);
+            } else {
+                db.run('INSERT INTO users (username, email, telefon, password) VALUES (?, ?, ?, ?)',
+                    [username, userEmail, userTelefon, hashedPassword],
+                    function(err) {
+                        if (err) return res.status(500).json({ error: err.message });
+                        finalUserId = this.lastID;
+                        vlozitRezervaci(finalUserId);
+                    });
+            }
+        });
     } else {
         vlozitRezervaci(finalUserId);
     }
