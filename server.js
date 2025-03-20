@@ -137,7 +137,7 @@ app.post('/profile/pets', authenticateToken, (req, res) => {
 app.get('/users', authenticateToken, (req, res) => {
     if (!req.user || !req.user.isAdmin) return res.status(403).json({ error: 'Pouze admin.' });
     const search = req.query.search || '';
-    db.all('SELECT id, username, email FROM users WHERE username LIKE ? OR email LIKE ?', [`%${search}%`, `%${search}%`], (err, rows) => {
+    db.all('SELECT id, username, email, isAdmin FROM users WHERE username LIKE ? OR email LIKE ?', [`%${search}%`, `%${search}%`], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json(rows);
     });
@@ -145,7 +145,7 @@ app.get('/users', authenticateToken, (req, res) => {
 
 app.get('/users/:id', authenticateToken, (req, res) => {
     if (!req.user || !req.user.isAdmin) return res.status(403).json({ error: 'Pouze admin.' });
-    db.get('SELECT username, email, telefon, notes, pets FROM users WHERE id = ?', [req.params.id], (err, user) => {
+    db.get('SELECT username, email, telefon, notes, pets, isAdmin FROM users WHERE id = ?', [req.params.id], (err, user) => {
         if (err) return res.status(500).json({ error: err.message });
         if (!user) return res.status(404).json({ error: 'Uživatel nenalezen.' });
         res.json({
@@ -153,7 +153,8 @@ app.get('/users/:id', authenticateToken, (req, res) => {
             email: user.email,
             telefon: user.telefon,
             notes: JSON.parse(user.notes),
-            pets: JSON.parse(user.pets)
+            pets: JSON.parse(user.pets),
+            isAdmin: user.isAdmin
         });
     });
 });
@@ -189,6 +190,40 @@ app.get('/users/:id/reservations', authenticateToken, (req, res) => {
     db.all('SELECT * FROM reservations WHERE userId = ? ORDER BY date, time', [userId], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json(rows);
+    });
+});
+
+// **Přidání nebo odebrání admin práv**
+app.put('/users/:id/toggle-admin', authenticateToken, (req, res) => {
+    if (!req.user || !req.user.isAdmin) return res.status(403).json({ error: 'Pouze admin může měnit role.' });
+    const userId = req.params.id;
+    if (userId == req.user.id) return res.status(403).json({ error: 'Nemůžete změnit vlastní roli.' });
+    
+    db.get('SELECT isAdmin FROM users WHERE id = ?', [userId], (err, row) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (!row) return res.status(404).json({ error: 'Uživatel nenalezen.' });
+        
+        const newIsAdmin = row.isAdmin ? 0 : 1;
+        db.run('UPDATE users SET isAdmin = ? WHERE id = ?', [newIsAdmin, userId], function(err) {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ success: true, isAdmin: newIsAdmin });
+        });
+    });
+});
+
+// **Smazání uživatele**
+app.delete('/users/:id', authenticateToken, (req, res) => {
+    if (!req.user || !req.user.isAdmin) return res.status(403).json({ error: 'Pouze admin může mazat uživatele.' });
+    const userId = req.params.id;
+    if (userId == req.user.id) return res.status(403).json({ error: 'Nemůžete smazat vlastní účet.' });
+
+    db.run('DELETE FROM reservations WHERE userId = ?', [userId], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        db.run('DELETE FROM users WHERE id = ?', [userId], function(err) {
+            if (err) return res.status(500).json({ error: err.message });
+            if (this.changes === 0) return res.status(404).json({ error: 'Uživatel nenalezen.' });
+            res.json({ success: true });
+        });
     });
 });
 
