@@ -3,43 +3,97 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Veterinární klinika</title>
+    <title>Veterinární ordinace</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #fff; /* Bílé pozadí */
-        }
-        .header {
-            padding: 20px;
-            text-align: center;
-        }
-        .header h1 {
-            color: #333; /* Tmavě šedý text */
-            margin: 0;
-        }
-        .reserve-btn {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background-color: #4CAF50; /* Zelené tlačítko */
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-        }
-        .reserve-btn:hover {
-            background-color: #45a049; /* Tmavší zelená při najetí */
-        }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f0f0f0; }
+        .hlavicka { padding: 20px; background-color: #4CAF50; color: white; text-align: center; }
+        .hlavicka h1 { margin: 0; }
+        .obsah { max-width: 1000px; margin: 20px auto; padding: 20px; background-color: white; border-radius: 5px; box-shadow: 0 0 10px rgba(0,0,0,0.1); text-align: center; }
+        .rezervovat-btn { padding: 10px 20px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 1.2em; }
+        .rezervovat-btn:hover { background-color: #45a049; }
+        .datum { text-align: center; font-size: 1.2em; margin-bottom: 20px; }
+        .vyber-datum { text-align: center; margin-bottom: 20px; }
+        .vyber-datum input[type="date"] { padding: 10px; font-size: 1em; border: 1px solid #ddd; border-radius: 5px; width: 360px; height: 40px; }
+        .terminy { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 20px; }
+        .termin { padding: 15px; text-align: center; border-radius: 5px; }
+        .volny { background-color: #4CAF50; color: white; }
+        .obsazeny { background-color: #f44336; color: white; }
+        .cekajici { background-color: #ff9800; color: white; }
+        .smazany { background-color: #9e9e9e; color: white; }
+        .podrobnosti { font-size: 0.9em; margin-top: 5px; }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>Veterinární klinika</h1>
+    <div class="hlavicka">
+        <h1>Vítejte na Veterinární klinice</h1>
     </div>
-    <button class="reserve-btn" onclick="window.location.href='/reservations'">Rezervovat</button>
+    <div class="obsah">
+        <p>Poskytujeme profesionální péči pro vaše mazlíčky. Podívejte se na dostupné termíny a rezervujte si svůj!</p>
+        <div class="datum" id="datum-home"></div>
+        <div class="vyber-datum">
+            <input type="date" id="vyber-dne-home" onchange="zmenitDen(this.value)">
+        </div>
+        <div class="terminy" id="terminy-home"></div>
+        <a href="/reservations"><button class="rezervovat-btn">Rezervovat termín</button></a>
+    </div>
+
+    <script>
+        let vybranyDen = new Date();
+        const casy = ["8:00", "8:30", "9:00", "9:30", "10:00", "10:30", "11:00", "11:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30"];
+
+        async function fetchReservations(date) {
+            const response = await fetch(`/reservations/${date}`);
+            return await response.json();
+        }
+
+        async function aktualizovatHome() {
+            const datumHome = document.getElementById('datum-home');
+            const vyberDne = document.getElementById('vyber-dne-home');
+            vyberDne.value = vybranyDen.toISOString().split('T')[0];
+            datumHome.textContent = `Dostupné termíny na ${vybranyDen.toLocaleDateString('cs-CZ', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`;
+            await aktualizovatTerminy();
+        }
+
+        async function aktualizovatTerminy() {
+            const terminyList = document.getElementById('terminy-home');
+            terminyList.innerHTML = '';
+            const denKey = vybranyDen.toISOString().split('T')[0];
+            const reservations = await fetchReservations(denKey);
+
+            casy.forEach(cas => {
+                const reservation = reservations.find(r => r.time === cas);
+                const div = document.createElement('div');
+                div.classList.add('termin');
+                div.textContent = reservation ? `${reservation.time}${reservation.timeEnd ? ` - ${reservation.timeEnd}` : ''}` : cas;
+
+                if (!reservation) {
+                    div.classList.add('volny');
+                } else if (reservation.deleted) {
+                    div.classList.add('smazany');
+                } else if (!reservation.approved) {
+                    div.classList.add('cekajici');
+                } else {
+                    div.classList.add('obsazeny');
+                }
+
+                if (reservation) {
+                    const podrobnosti = document.createElement('div');
+                    podrobnosti.classList.add('podrobnosti');
+                    podrobnosti.textContent = `${reservation.zakaznik} (${reservation.zvire || 'Bez zvířete'}) - ${reservation.duvod}`;
+                    div.appendChild(podrobnosti);
+                }
+
+                terminyList.appendChild(div);
+            });
+        }
+
+        function zmenitDen(datum) {
+            vybranyDen = new Date(datum);
+            aktualizovatHome();
+        }
+
+        // Inicializace
+        aktualizovatHome();
+    </script>
 </body>
 </html>
