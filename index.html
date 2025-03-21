@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rezervace - Veterinární ordinace</title>
+    <title>Veterinární ordinace</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f0f0f0; }
         .hlavicka { display: flex; justify-content: space-between; align-items: center; padding: 20px; background-color: #4CAF50; color: white; }
@@ -55,21 +55,24 @@
         .notification { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background-color: #ff9800; color: white; padding: 15px; border-radius: 5px; box-shadow: 0 0 10px rgba(0,0,0,0.3); z-index: 1000; }
         .notification .zavrit { cursor: pointer; margin-left: 10px; font-size: 20px; }
         #zakaznik-search-results { position: absolute; background-color: white; border: 1px solid #ddd; width: 360px; max-height: 200px; overflow-y: auto; z-index: 10; }
-        #zakaznik-search-results div { padding: 10px; cursor: pointer; }
-        #zakaznik-search-results div:hover { background-color: #f0f0f0; }
         .zpet-btn { padding: 10px 20px; background-color: #2196F3; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 1em; }
         .zpet-btn:hover { background-color: #1976D2; }
         .rezervace-list { margin-top: 20px; max-height: 300px; overflow-y: auto; }
         .rezervace-item { padding: 10px; border: 1px solid #ddd; border-radius: 5px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
         .rezervace-item button { padding: 5px 10px; background-color: #ff9800; color: white; border: none; border-radius: 5px; cursor: pointer; }
         .rezervace-item button:hover { background-color: #e68900; }
+        #home-sekce { text-align: center; }
+        #home-sekce h2 { color: #4CAF50; }
+        #home-sekce p { font-size: 1.1em; margin: 20px 0; }
+        #home-sekce button { padding: 15px 30px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 1.2em; }
+        #home-sekce button:hover { background-color: #45a049; }
     </style>
 </head>
 <body>
     <div class="hlavicka">
-        <h1>Veterinární ordinace - Rezervace</h1>
+        <h1>Veterinární ordinace</h1>
         <div class="hlavicka-buttons">
-            <a href="/"><button class="zpet-btn">Zpět na hlavní stránku</button></a>
+            <button class="zpet-btn" id="zpet-btn" onclick="zobrazitHome()">Hlavní stránka</button>
             <button class="prihlaseni-btn" onclick="zobrazitPrihlaseni()">Přihlášení</button>
             <button class="prihlaseni-btn" onclick="zobrazitRegistraci()">Registrace</button>
             <button class="prihlaseni-btn hidden" id="pridat-mazlicka-btn" onclick="zobrazitPridaniMazlicka()">Přidat mazlíčka</button>
@@ -77,7 +80,15 @@
         </div>
     </div>
 
-    <div class="sekce" id="zakaznici-sekce">
+    <!-- Hlavní stránka -->
+    <div class="sekce" id="home-sekce">
+        <h2>Vítejte u nás!</h2>
+        <p>Jsme veterinární ordinace, která se stará o zdraví vašich mazlíčků. Nabízíme profesionální péči a individuální přístup.</p>
+        <button onclick="zobrazitRezervace()">Přejít na rezervace</button>
+    </div>
+
+    <!-- Rezervační systém -->
+    <div class="sekce hidden" id="zakaznici-sekce">
         <div class="datum" id="datum-zakaznici"></div>
         <div class="vyber-datum">
             <input type="date" id="vyber-dne" onchange="zmenitDen(this.value)">
@@ -106,6 +117,7 @@
         <div class="user-list" id="user-list"></div>
     </div>
 
+    <!-- Formuláře -->
     <div class="formular" id="prihlaseni-form">
         <h3>Přihlášení <span class="zavrit" onclick="zavritPrihlaseni()">×</span></h3>
         <input type="text" id="jmeno" placeholder="Uživatelské jméno">
@@ -122,7 +134,6 @@
         <button onclick="registrovat()">Registrovat se</button>
     </div>
 
-    <!-- Formulář pro zákazníka -->
     <div class="formular" id="rezervace-form-zakaznik">
         <h3>Nová rezervace <span class="zavrit" onclick="zavritRezervaci()">×</span></h3>
         <input type="text" id="zakaznik-zakaznik" placeholder="Jméno zákazníka" required disabled>
@@ -134,7 +145,6 @@
         <button onclick="ulozitRezervaciZakaznik()">Uložit</button>
     </div>
 
-    <!-- Formulář pro admina -->
     <div class="formular" id="rezervace-form-admin">
         <h3>Nová rezervace <span class="zavrit" onclick="zavritRezervaciAdmin()">×</span></h3>
         <input type="text" id="zakaznik-search" placeholder="Hledat zákazníka..." oninput="hledatZakaznika()">
@@ -225,20 +235,48 @@
             jeAdmin = localStorage.getItem('isAdmin') === 'true';
             fetchUserData().then(() => {
                 if (jeAdmin) {
-                    document.getElementById('zakaznici-sekce').classList.add('hidden');
+                    zobrazitRezervace();
                     document.getElementById('admin-sekce').classList.remove('hidden');
                     aktualizovatAdmin();
                 } else {
                     document.getElementById('pridat-mazlicka-btn').classList.remove('hidden');
-                    aktualizovatZakaznici();
-                    zobrazitMojeRezervace();
+                    zobrazitHome();
                 }
                 document.getElementById('odhlaseni-btn').classList.remove('hidden');
+            }).catch(() => {
+                localStorage.clear();
+                jePrihlasen = false;
+                jeAdmin = false;
+                token = null;
+                userId = null;
+                zobrazitHome();
             });
         } else {
-            aktualizovatZakaznici();
+            zobrazitHome();
         }
     });
+
+    function zobrazitHome() {
+        document.getElementById('home-sekce').classList.remove('hidden');
+        document.getElementById('zakaznici-sekce').classList.add('hidden');
+        document.getElementById('admin-sekce').classList.add('hidden');
+        document.getElementById('zpet-btn').classList.add('hidden');
+    }
+
+    function zobrazitRezervace() {
+        document.getElementById('home-sekce').classList.add('hidden');
+        if (jeAdmin) {
+            document.getElementById('admin-sekce').classList.remove('hidden');
+            document.getElementById('zakaznici-sekce').classList.add('hidden');
+            aktualizovatAdmin();
+        } else {
+            document.getElementById('zakaznici-sekce').classList.remove('hidden');
+            document.getElementById('admin-sekce').classList.add('hidden');
+            aktualizovatZakaznici();
+            if (jePrihlasen) zobrazitMojeRezervace();
+        }
+        document.getElementById('zpet-btn').classList.remove('hidden');
+    }
 
     async function fetchReservations(date) {
         const response = await fetch(`/reservations/${date}`, {
@@ -251,6 +289,7 @@
         const response = await fetch('/profile', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
+        if (!response.ok) throw new Error('Neplatný token');
         const data = await response.json();
         userPets = data.pets || [];
         return data;
@@ -486,15 +525,15 @@
             document.getElementById('odhlaseni-btn').classList.remove('hidden');
             if (!jeAdmin) document.getElementById('pridat-mazlicka-btn').classList.remove('hidden');
             if (jeAdmin) {
-                document.getElementById('zakaznici-sekce').classList.add('hidden');
                 document.getElementById('admin-sekce').classList.remove('hidden');
                 aktualizovatAdmin();
             } else {
                 aktualizovatZakaznici();
                 zobrazitMojeRezervace();
             }
+            zobrazitRezervace();
         } else {
-            alert("Špatné jméno nebo heslo!");
+            alert(result.message || "Špatné jméno nebo heslo!");
         }
     }
 
@@ -529,11 +568,9 @@
         userPets = [];
         vybranyZakaznikId = null;
         localStorage.clear();
-        document.getElementById('zakaznici-sekce').classList.remove('hidden');
-        document.getElementById('admin-sekce').classList.add('hidden');
         document.getElementById('pridat-mazlicka-btn').classList.add('hidden');
         document.getElementById('odhlaseni-btn').classList.add('hidden');
-        aktualizovatZakaznici();
+        zobrazitHome();
     }
 
     async function zobrazitRezervaciZakaznik() {
@@ -759,8 +796,10 @@
                 document.getElementById('editace-form').style.display = 'none';
                 if (jeAdmin) aktualizovatAdmin();
                 else aktualizovatZakaznici();
+                zobrazitMojeRezervace();
             } else {
-                alert("Nepodařilo se uložit změny.");
+                const result = await response.json();
+                alert(result.error || "Nepodařilo se uložit změny.");
             }
         } else {
             alert("Vyplňte povinné údaje!");
@@ -778,7 +817,10 @@
             if (response.ok) {
                 document.getElementById('editace-form').style.display = 'none';
                 if (jeAdmin) aktualizovatAdmin();
-                else aktualizovatZakaznici();
+                else {
+                    aktualizovatZakaznici();
+                    zobrazitMojeRezervace();
+                }
             } else {
                 alert('Nepodařilo se smazat rezervaci.');
             }
@@ -956,7 +998,7 @@
         const rezervaceList = document.getElementById('moje-rezervace-list');
         rezervaceList.innerHTML = '';
         reservations.forEach(res => {
-            if (res.deleted) return; // Nezobrazujeme smazané
+            if (res.deleted) return;
             const div = document.createElement('div');
             div.classList.add('rezervace-item');
             div.textContent = `${res.date} ${res.time}${res.timeEnd ? ` - ${res.timeEnd}` : ''}: ${res.zvire || 'Bez zvířete'} - ${res.duvod}${res.approved ? '' : ' (Čeká na schválení)'}`;
@@ -969,6 +1011,7 @@
             div.appendChild(editBtn);
             rezervaceList.appendChild(div);
         });
+        document.getElementById('moje-rezervace-sekce').classList.remove('hidden');
     }
 </script>
 </body>
