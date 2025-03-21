@@ -57,12 +57,19 @@
         #zakaznik-search-results { position: absolute; background-color: white; border: 1px solid #ddd; width: 360px; max-height: 200px; overflow-y: auto; z-index: 10; }
         #zakaznik-search-results div { padding: 10px; cursor: pointer; }
         #zakaznik-search-results div:hover { background-color: #f0f0f0; }
+        .zpet-btn { padding: 10px 20px; background-color: #2196F3; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 1em; }
+        .zpet-btn:hover { background-color: #1976D2; }
+        .rezervace-list { margin-top: 20px; max-height: 300px; overflow-y: auto; }
+        .rezervace-item { padding: 10px; border: 1px solid #ddd; border-radius: 5px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .rezervace-item button { padding: 5px 10px; background-color: #ff9800; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .rezervace-item button:hover { background-color: #e68900; }
     </style>
 </head>
 <body>
     <div class="hlavicka">
         <h1>Veterinární ordinace - Rezervace</h1>
         <div class="hlavicka-buttons">
+            <a href="/"><button class="zpet-btn">Zpět na hlavní stránku</button></a>
             <button class="prihlaseni-btn" onclick="zobrazitPrihlaseni()">Přihlášení</button>
             <button class="prihlaseni-btn" onclick="zobrazitRegistraci()">Registrace</button>
             <button class="prihlaseni-btn hidden" id="pridat-mazlicka-btn" onclick="zobrazitPridaniMazlicka()">Přidat mazlíčka</button>
@@ -76,6 +83,10 @@
             <input type="date" id="vyber-dne" onchange="zmenitDen(this.value)">
         </div>
         <div class="terminy" id="terminy-zakaznici"></div>
+        <div id="moje-rezervace-sekce" class="hidden">
+            <h2>Moje rezervace</h2>
+            <div id="moje-rezervace-list" class="rezervace-list"></div>
+        </div>
     </div>
 
     <div class="sekce hidden" id="admin-sekce">
@@ -220,6 +231,7 @@
                 } else {
                     document.getElementById('pridat-mazlicka-btn').classList.remove('hidden');
                     aktualizovatZakaznici();
+                    zobrazitMojeRezervace();
                 }
                 document.getElementById('odhlaseni-btn').classList.remove('hidden');
             });
@@ -479,6 +491,7 @@
                 aktualizovatAdmin();
             } else {
                 aktualizovatZakaznici();
+                zobrazitMojeRezervace();
             }
         } else {
             alert("Špatné jméno nebo heslo!");
@@ -627,6 +640,7 @@
                 document.getElementById('rezervace-form-zakaznik').style.display = 'none';
                 alert("Rezervace uložena. Vyčkejte na schválení.");
                 aktualizovatZakaznici();
+                zobrazitMojeRezervace();
             } else {
                 alert(result.error || "Nepodařilo se uložit rezervaci.");
             }
@@ -934,6 +948,27 @@
                 alert("Nepodařilo se přidat poznámku.");
             }
         }
+    }
+
+    async function zobrazitMojeRezervace() {
+        if (!jePrihlasen || jeAdmin) return;
+        const reservations = await fetchUserReservations(userId);
+        const rezervaceList = document.getElementById('moje-rezervace-list');
+        rezervaceList.innerHTML = '';
+        reservations.forEach(res => {
+            if (res.deleted) return; // Nezobrazujeme smazané
+            const div = document.createElement('div');
+            div.classList.add('rezervace-item');
+            div.textContent = `${res.date} ${res.time}${res.timeEnd ? ` - ${res.timeEnd}` : ''}: ${res.zvire || 'Bez zvířete'} - ${res.duvod}${res.approved ? '' : ' (Čeká na schválení)'}`;
+            const editBtn = document.createElement('button');
+            editBtn.textContent = 'Upravit';
+            editBtn.onclick = () => {
+                vybranyTermin = res;
+                zobrazitEditaci();
+            };
+            div.appendChild(editBtn);
+            rezervaceList.appendChild(div);
+        });
     }
 </script>
 </body>
