@@ -73,8 +73,8 @@
         <h1>Veterinární ordinace</h1>
         <div class="hlavicka-buttons">
             <button class="zpet-btn" id="zpet-btn" onclick="zobrazitHome()">Hlavní stránka</button>
-            <button class="prihlaseni-btn" onclick="zobrazitPrihlaseni()">Přihlášení</button>
-            <button class="prihlaseni-btn" onclick="zobrazitRegistraci()">Registrace</button>
+            <button class="prihlaseni-btn hidden" id="prihlaseni-btn" onclick="zobrazitPrihlaseni()">Přihlášení</button>
+            <button class="prihlaseni-btn hidden" id="registrace-btn" onclick="zobrazitRegistraci()">Registrace</button>
             <button class="prihlaseni-btn hidden" id="pridat-mazlicka-btn" onclick="zobrazitPridaniMazlicka()">Přidat mazlíčka</button>
             <button class="prihlaseni-btn hidden" id="odhlaseni-btn" onclick="odhlasit()">Odhlásit</button>
         </div>
@@ -240,9 +240,9 @@
                     aktualizovatAdmin();
                 } else {
                     document.getElementById('pridat-mazlicka-btn').classList.remove('hidden');
+                    document.getElementById('odhlaseni-btn').classList.remove('hidden');
                     zobrazitHome();
                 }
-                document.getElementById('odhlaseni-btn').classList.remove('hidden');
             }).catch(() => {
                 localStorage.clear();
                 jePrihlasen = false;
@@ -261,10 +261,20 @@
         document.getElementById('zakaznici-sekce').classList.add('hidden');
         document.getElementById('admin-sekce').classList.add('hidden');
         document.getElementById('zpet-btn').classList.add('hidden');
+        document.getElementById('prihlaseni-btn').classList.add('hidden');
+        document.getElementById('registrace-btn').classList.add('hidden');
+        if (jePrihlasen) {
+            document.getElementById('odhlaseni-btn').classList.remove('hidden');
+            if (!jeAdmin) document.getElementById('pridat-mazlicka-btn').classList.remove('hidden');
+        } else {
+            document.getElementById('odhlaseni-btn').classList.add('hidden');
+            document.getElementById('pridat-mazlicka-btn').classList.add('hidden');
+        }
     }
 
     function zobrazitRezervace() {
         document.getElementById('home-sekce').classList.add('hidden');
+        document.getElementById('zpet-btn').classList.remove('hidden');
         if (jeAdmin) {
             document.getElementById('admin-sekce').classList.remove('hidden');
             document.getElementById('zakaznici-sekce').classList.add('hidden');
@@ -275,7 +285,13 @@
             aktualizovatZakaznici();
             if (jePrihlasen) zobrazitMojeRezervace();
         }
-        document.getElementById('zpet-btn').classList.remove('hidden');
+        if (!jePrihlasen) {
+            document.getElementById('prihlaseni-btn').classList.remove('hidden');
+            document.getElementById('registrace-btn').classList.remove('hidden');
+        } else {
+            document.getElementById('odhlaseni-btn').classList.remove('hidden');
+            if (!jeAdmin) document.getElementById('pridat-mazlicka-btn').classList.remove('hidden');
+        }
     }
 
     async function fetchReservations(date) {
@@ -420,9 +436,9 @@
     async function prohledatUzivatele() {
         if (!jeAdmin) return;
         const search = document.getElementById('search-users').value;
-        const users = await fetchUsers(search);
         const userList = document.getElementById('user-list');
         userList.innerHTML = '';
+        const users = await fetchUsers(search);
         users.forEach(user => {
             const div = document.createElement('div');
             div.classList.add('user-item');
@@ -522,6 +538,8 @@
             localStorage.setItem('userId', userId);
             localStorage.setItem('isAdmin', jeAdmin);
             document.getElementById('prihlaseni-form').style.display = 'none';
+            document.getElementById('prihlaseni-btn').classList.add('hidden');
+            document.getElementById('registrace-btn').classList.add('hidden');
             document.getElementById('odhlaseni-btn').classList.remove('hidden');
             if (!jeAdmin) document.getElementById('pridat-mazlicka-btn').classList.remove('hidden');
             if (jeAdmin) {
@@ -570,6 +588,8 @@
         localStorage.clear();
         document.getElementById('pridat-mazlicka-btn').classList.add('hidden');
         document.getElementById('odhlaseni-btn').classList.add('hidden');
+        document.getElementById('prihlaseni-btn').classList.add('hidden');
+        document.getElementById('registrace-btn').classList.add('hidden');
         zobrazitHome();
     }
 
