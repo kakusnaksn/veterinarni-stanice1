@@ -431,7 +431,7 @@
                 if (reservation.telefon) text += `\nTel: ${reservation.telefon}`;
                 if (reservation.email) text += `\nEmail: ${reservation.email}`;
                 if (reservation.note) text += `\nPoznámka: ${reservation.note}`;
-                if (jeAdmin && reservation.internalNote) text += `\nInterní poznámka: ${reservation.internalNote}`;
+                if (editMode && jeAdmin && reservation.internalNote) text += `\nInterní poznámka: ${reservation.internalNote}`; // Interní poznámka pouze pro admina v edit módu
                 if (!reservation.approved) text += `\n(Čeká na schválení)`;
                 if (reservation.deleted) text += `\n(Smazáno zákazníkem)`;
                 podrobnosti.textContent = text;
@@ -839,7 +839,7 @@
                 interniPoznamka.value = vybranyTermin.internalNote || '';
             } else {
                 interniPoznamka.classList.add('hidden');
-                interniPoznamka.value = '';
+                interniPoznamka.value = ''; // Zajištění, že zákazník nemůže změnit interní poznámku
             }
             document.getElementById('schvalit-btn').classList.toggle('hidden', vybranyTermin.approved || !jeAdmin || vybranyTermin.deleted);
         } catch (error) {
@@ -861,7 +861,7 @@
         const time = document.getElementById('edit-cas-zacatek').value;
         const timeEnd = document.getElementById('edit-cas-konec').value;
         const note = document.getElementById('edit-poznamka').value;
-        const internalNote = jeAdmin ? document.getElementById('edit-interni-poznamka').value : vybranyTermin.internalNote;
+        const internalNote = jeAdmin ? document.getElementById('edit-interni-poznamka').value : vybranyTermin.internalNote; // Zákazník nemůže měnit interní poznámku
 
         if (zakaznik && duvod && (jeAdmin || zvire)) {
             const reservation = {
