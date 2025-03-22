@@ -772,8 +772,13 @@
         document.getElementById('edit-cas-konec').value = vybranyTermin.timeEnd || '';
         document.getElementById('edit-poznamka').value = vybranyTermin.note || '';
         const interniPoznamka = document.getElementById('edit-interni-poznamka');
-        interniPoznamka.classList.toggle('hidden', !jeAdmin);
-        if (jeAdmin) interniPoznamka.value = vybranyTermin.internalNote || '';
+        if (jeAdmin) {
+            interniPoznamka.classList.remove('hidden');
+            interniPoznamka.value = vybranyTermin.internalNote || '';
+        } else {
+            interniPoznamka.classList.add('hidden');
+            interniPoznamka.value = '';
+        }
         document.getElementById('schvalit-btn').classList.toggle('hidden', vybranyTermin.approved || !jeAdmin || vybranyTermin.deleted);
     }
 
